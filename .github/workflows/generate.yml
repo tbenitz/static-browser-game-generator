@@ -1,0 +1,53 @@
+name: Generate Game
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_idea:
+        description: "Game idea for DeepSeek to implement as a single-file Babylon.js game"
+        required: true
+        default: "Neon hover-craft arena. Collect 10 orbs in 60 seconds. Avoid red sentries. WASD + Shift boost."
+      extra_pass:
+        description: "Run one extra DeepSeek review pass after generation"
+        required: false
+        default: "false"
+        type: boolean
+      model:
+        description: "DeepSeek model id"
+        required: false
+        default: "deepseek-chat"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate index.html
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: ${{ inputs.model }}
+          GAME_IDEA: ${{ inputs.game_idea }}
+          EXTRA_PASS: ${{ inputs.extra_pass == true && '1' || '0' }}
+        run: node scripts/generate.mjs
+
+      - name: Commit generated game
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html artifacts/plan.md || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Generate single-file game from prompt"
+            git push
+          fi

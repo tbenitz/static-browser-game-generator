@@ -1,0 +1,11 @@
+{
+  "name": "static-browser-game-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generate single-file Babylon.js games with DeepSeek and publish them on GitHub Pages.",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "serve": "npx --yes serve ."
+  }
+}
