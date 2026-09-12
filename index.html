@@ -1,279 +1,843 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orb Drift</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Balloon Hunt 3D</title>
   <style>
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #05060a; font-family: ui-sans-serif, system-ui, sans-serif; }
-    #renderCanvas { width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
-    #ui {
-      position: absolute; inset: 0; pointer-events: none;
-      color: #e8f0ff;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+    }
+    #renderCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      outline: none;
+      touch-action: none;
     }
     #hud {
-      position: absolute; top: 16px; left: 16px; right: 16px;
-      display: flex; justify-content: space-between; gap: 12px;
-      text-shadow: 0 2px 10px #000;
-      font-size: 18px; letter-spacing: 0.04em;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
     }
-    #overlay {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      background: radial-gradient(circle at 50% 40%, rgba(20, 30, 60, 0.55), rgba(0,0,0,0.78));
+    .hud-text {
+      position: absolute;
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.8), 0 0 12px rgba(0,0,0,0.5);
+      letter-spacing: 1px;
+    }
+    #scoreDisplay {
+      top: 18px;
+      left: 24px;
+    }
+    #ammoDisplay {
+      top: 18px;
+      right: 24px;
+      text-align: right;
+    }
+    #waveDisplay {
+      top: 52px;
+      right: 24px;
+      text-align: right;
+      font-size: 18px;
+      opacity: 0.9;
+    }
+    #comboDisplay {
+      top: 52px;
+      left: 24px;
+      font-size: 18px;
+      color: #ffdd44;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    #comboDisplay.visible {
+      opacity: 1;
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 32px;
+      height: 32px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+    #crosshair::before {
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      transform: translateY(-50%);
+    }
+    #crosshair::after {
+      left: 50%;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      transform: translateX(-50%);
+    }
+    #crosshair .dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 4px;
+      height: 4px;
+      background: #ff3333;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 6px rgba(255,50,50,0.9);
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      text-align: center;
       pointer-events: auto;
+      z-index: 20;
+      transition: opacity 0.3s;
     }
-    .panel {
-      width: min(520px, 90vw);
-      padding: 28px 32px;
-      border: 1px solid rgba(140, 190, 255, 0.25);
-      background: rgba(8, 12, 24, 0.82);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    .overlay.hidden {
+      display: none;
     }
-    h1 { margin: 0 0 8px; font-size: 36px; letter-spacing: 0.08em; }
-    p { margin: 0 0 18px; color: #b8c7e6; line-height: 1.45; }
-    button {
-      pointer-events: auto;
-      border: 0; border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 16px; font-weight: 700; letter-spacing: 0.06em;
-      color: #061018; background: #7ee0ff;
+    .overlay h1 {
+      font-size: 52px;
+      margin-bottom: 12px;
+      text-shadow: 3px 3px 12px rgba(0,0,0,0.9), 0 0 30px rgba(255,200,50,0.4);
+      letter-spacing: 3px;
+    }
+    .overlay h2 {
+      font-size: 36px;
+      margin-bottom: 16px;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
+    }
+    .overlay p {
+      font-size: 18px;
+      margin-bottom: 8px;
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+    .overlay .big-score {
+      font-size: 42px;
+      font-weight: 800;
+      color: #ffdd44;
+      margin: 16px 0;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
+    }
+    .btn {
+      margin-top: 24px;
+      padding: 14px 48px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #1a1a2e;
+      background: linear-gradient(180deg, #ffe066, #ffb300);
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
+      box-shadow: 0 4px 16px rgba(255,180,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
+      transition: transform 0.1s, box-shadow 0.1s;
+      pointer-events: auto;
     }
-    button:hover { filter: brightness(1.08); }
-    .hidden { display: none !important; }
-    kbd { background: #1b2438; border-radius: 5px; padding: 1px 6px; }
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 24px rgba(255,180,0,0.7), inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    #waveBanner {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 3px 3px 16px rgba(0,0,0,0.9), 0 0 40px rgba(100,200,255,0.6);
+      letter-spacing: 4px;
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+      z-index: 15;
+      text-align: center;
+    }
+    #waveBanner.show {
+      opacity: 1;
+    }
+    #pauseOverlay .overlay-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .controls-hint {
+      margin-top: 20px;
+      font-size: 15px;
+      opacity: 0.7;
+      line-height: 1.8;
+    }
+    .controls-hint kbd {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    #loadingOverlay {
+      background: #0a0a1a;
+    }
+    #loadingOverlay .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: #ffb300;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
-  <div id="ui">
-    <div id="hud">
-      <div>SCORE <strong id="score">0</strong></div>
-      <div>TIME <strong id="time">60</strong></div>
-      <div>ORBS <strong id="orbs">0</strong></div>
+
+  <div id="hud">
+    <div id="scoreDisplay" class="hud-text">Score: 0</div>
+    <div id="ammoDisplay" class="hud-text">Ammo: 6/6</div>
+    <div id="waveDisplay" class="hud-text">Wave 1/3</div>
+    <div id="comboDisplay" class="hud-text">Combo x2</div>
+    <div id="crosshair"><div class="dot"></div></div>
+    <div id="waveBanner"></div>
+  </div>
+
+  <div id="menuOverlay" class="overlay">
+    <h1>🎈 BALLOON HUNT 3D</h1>
+    <p>Shoot the balloons before they escape!</p>
+    <p>Clear 3 waves to win. Don't let them get away.</p>
+    <div class="controls-hint">
+      <kbd>Mouse</kbd> Aim &nbsp; <kbd>Click</kbd> / <kbd>Space</kbd> Shoot &nbsp; <kbd>R</kbd> Reload &nbsp; <kbd>Esc</kbd> Pause
     </div>
-    <div id="overlay">
-      <div class="panel">
-        <h1 id="title">ORB DRIFT</h1>
-        <p id="blurb">Fly the hover-craft, scoop neon orbs, and dodge the roaming sentries. Fully client-side Babylon.js — no assets, no backend.</p>
-        <p>Move with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows. Boost with <kbd>Shift</kbd>.</p>
-        <button id="startBtn" type="button">START</button>
-      </div>
+    <button class="btn" id="startBtn">START</button>
+  </div>
+
+  <div id="pauseOverlay" class="overlay hidden">
+    <div class="overlay-content">
+      <h2>PAUSED</h2>
+      <p>Press <kbd>Esc</kbd> to resume</p>
+      <button class="btn" id="resumeBtn">RESUME</button>
     </div>
+  </div>
+
+  <div id="gameoverOverlay" class="overlay hidden">
+    <h2>GAME OVER</h2>
+    <p id="gameoverReason">A balloon escaped!</p>
+    <div class="big-score" id="gameoverScore">Score: 0</div>
+    <button class="btn" id="retryBtn">TRY AGAIN</button>
+  </div>
+
+  <div id="victoryOverlay" class="overlay hidden">
+    <h2>🏆 VICTORY!</h2>
+    <p>You cleared all 3 waves!</p>
+    <div class="big-score" id="victoryScore">Score: 0</div>
+    <button class="btn" id="playAgainBtn">PLAY AGAIN</button>
+  </div>
+
+  <div id="loadingOverlay" class="overlay">
+    <div class="spinner"></div>
+    <p>Loading Babylon.js...</p>
   </div>
 
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script>
-    (function () {
-      const canvas = document.getElementById("renderCanvas");
-      const scoreEl = document.getElementById("score");
-      const timeEl = document.getElementById("time");
-      const orbsEl = document.getElementById("orbs");
-      const overlay = document.getElementById("overlay");
-      const titleEl = document.getElementById("title");
-      const blurbEl = document.getElementById("blurb");
-      const startBtn = document.getElementById("startBtn");
+    (function() {
+      'use strict';
 
-      const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
-      const scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0.02, 0.03, 0.06, 1);
+      // ============================================================
+      // GAME CONSTANTS
+      // ============================================================
+      var WAVE_COUNTS = [8, 12, 16];
+      var MAX_AMMO = 6;
+      var RELOAD_TIME = 1.2; // seconds
+      var ESCAPE_Z = -55;    // balloons escape past this Z (they fly away from camera)
+      var ESCAPE_Y = 40;     // or above this height
+      var SPAWN_Z_MIN = -18;
+      var SPAWN_Z_MAX = -8;
+      var SPAWN_X_RANGE = 14;
+      var SPAWN_Y = -2;
+      var BALLOON_BASE_SPEED = 3.2;
+      var BALLOON_SPEED_PER_WAVE = 0.7;
+      var SMALL_BALLOON_CHANCE = 0.25;
+      var COMBO_TIMEOUT = 2.5; // seconds to keep combo
 
-      const camera = new BABYLON.FollowCamera("cam", new BABYLON.Vector3(0, 12, -18), scene);
-      camera.radius = 16;
-      camera.heightOffset = 7;
-      camera.rotationOffset = 180;
-      camera.cameraAcceleration = 0.05;
-      camera.maxCameraSpeed = 20;
-      camera.attachControl(canvas, true);
+      // ============================================================
+      // DOM REFS
+      // ============================================================
+      var canvas = document.getElementById('renderCanvas');
+      var scoreDisplay = document.getElementById('scoreDisplay');
+      var ammoDisplay = document.getElementById('ammoDisplay');
+      var waveDisplay = document.getElementById('waveDisplay');
+      var comboDisplay = document.getElementById('comboDisplay');
+      var waveBanner = document.getElementById('waveBanner');
+      var menuOverlay = document.getElementById('menuOverlay');
+      var pauseOverlay = document.getElementById('pauseOverlay');
+      var gameoverOverlay = document.getElementById('gameoverOverlay');
+      var victoryOverlay = document.getElementById('victoryOverlay');
+      var loadingOverlay = document.getElementById('loadingOverlay');
+      var gameoverReason = document.getElementById('gameoverReason');
+      var gameoverScore = document.getElementById('gameoverScore');
+      var victoryScore = document.getElementById('victoryScore');
 
-      const light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.2, 1, 0.3), scene);
-      light.intensity = 0.65;
-      const dir = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(-0.4, -1, 0.3), scene);
-      dir.position = new BABYLON.Vector3(20, 40, -10);
-      dir.intensity = 0.9;
+      // ============================================================
+      // GAME STATE
+      // ============================================================
+      var STATE = {
+        BOOT: 'BOOT',
+        MENU: 'MENU',
+        PLAYING: 'PLAYING',
+        PAUSED: 'PAUSED',
+        WAVE_CLEAR: 'WAVE_CLEAR',
+        GAME_OVER: 'GAME_OVER',
+        VICTORY: 'VICTORY'
+      };
 
-      const glow = new BABYLON.GlowLayer("glow", scene);
-      glow.intensity = 0.7;
+      var game = {
+        state: STATE.BOOT,
+        score: 0,
+        ammo: MAX_AMMO,
+        wave: 0,
+        balloonsSpawned: 0,
+        balloonsPopped: 0,
+        balloonsEscaped: 0,
+        balloonsAlive: 0,
+        combo: 0,
+        comboTimer: 0,
+        reloading: false,
+        reloadTimer: 0,
+        spawnTimer: 0,
+        spawnInterval: 1.0,
+        waveClearTimer: 0,
+        totalBalloonsInWave: 0
+      };
 
-      const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 80, height: 80 }, scene);
-      const groundMat = new BABYLON.StandardMaterial("gmat", scene);
-      groundMat.diffuseColor = new BABYLON.Color3(0.05, 0.08, 0.14);
-      groundMat.specularColor = new BABYLON.Color3(0.05, 0.08, 0.12);
-      ground.material = groundMat;
+      // ============================================================
+      // BABYLON SETUP
+      // ============================================================
+      var engine = null;
+      var scene = null;
+      var camera = null;
+      var balloons = [];
+      var particleSystems = [];
+      var ground = null;
+      var skybox = null;
+      var launcherGroup = null;
+      var crosshairMesh = null;
 
-      const grid = BABYLON.MeshBuilder.CreateGround("grid", { width: 80, height: 80, subdivisions: 20 }, scene);
-      const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
-      gridMat.wireframe = true;
-      gridMat.emissiveColor = new BABYLON.Color3(0.08, 0.22, 0.38);
-      gridMat.alpha = 0.35;
-      grid.material = gridMat;
-      grid.position.y = 0.02;
+      // Camera aim
+      var aimYaw = 0;
+      var aimPitch = 0;
+      var targetYaw = 0;
+      var targetPitch = 0;
+      var MAX_YAW = 0.7;
+      var MAX_PITCH_UP = 0.55;
+      var MAX_PITCH_DOWN = 0.35;
 
-      function makeWall(name, w, d, x, z) {
-        const wall = BABYLON.MeshBuilder.CreateBox(name, { width: w, height: 3.2, depth: d }, scene);
-        wall.position.set(x, 1.6, z);
-        const mat = new BABYLON.StandardMaterial(name + "m", scene);
-        mat.diffuseColor = new BABYLON.Color3(0.08, 0.16, 0.28);
-        mat.emissiveColor = new BABYLON.Color3(0.02, 0.06, 0.12);
-        wall.material = mat;
-        return wall;
+      // Audio
+      var audioCtx = null;
+
+      function initAudio() {
+        if (audioCtx) return;
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) audioCtx = new AC();
+        } catch (e) {
+          audioCtx = null;
+        }
       }
-      const walls = [
-        makeWall("n", 84, 2, 0, 41),
-        makeWall("s", 84, 2, 0, -41),
-        makeWall("e", 2, 84, 41, 0),
-        makeWall("w", 2, 84, -41, 0)
+
+      function playSound(type) {
+        if (!audioCtx) return;
+        try {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          var now = audioCtx.currentTime;
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          if (type === 'shoot') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(220, now + 0.08);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.12);
+          } else if (type === 'pop') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            osc.start(now);
+            osc.stop(now + 0.2);
+          } else if (type === 'reload') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.linearRampToValueAtTime(500, now + 0.1);
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.16);
+          } else if (type === 'empty') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            osc.start(now);
+            osc.stop(now + 0.07);
+          } else if (type === 'escape') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            osc.start(now);
+            osc.stop(now + 0.5);
+          } else if (type === 'win') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523, now);
+            osc.frequency.setValueAtTime(659, now + 0.15);
+            osc.frequency.setValueAtTime(784, now + 0.3);
+            osc.frequency.setValueAtTime(1047, now + 0.45);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+            osc.start(now);
+            osc.stop(now + 0.75);
+          }
+        } catch (e) {
+          // audio failure is non-fatal
+        }
+      }
+
+      // ============================================================
+      // SCENE CREATION
+      // ============================================================
+      function createScene() {
+        scene = new BABYLON.Scene(engine);
+        scene.clearColor = new BABYLON.Color4(0.35, 0.55, 0.85, 1.0);
+        scene.ambientColor = new BABYLON.Color3(0.4, 0.4, 0.5);
+
+        // Camera — fixed at origin, slight look-around
+        camera = new BABYLON.UniversalCamera('camera', new BABYLON.Vector3(0, 1.6, 0), scene);
+        camera.setTarget(new BABYLON.Vector3(0, 1.6, -10));
+        camera.fov = 1.1;
+        camera.minZ = 0.1;
+        camera.maxZ = 300;
+
+        // Lights
+        var hemi = new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0, 1, 0), scene);
+        hemi.intensity = 0.75;
+        hemi.diffuse = new BABYLON.Color3(1, 0.98, 0.9);
+        hemi.groundColor = new BABYLON.Color3(0.25, 0.3, 0.2);
+
+        var dir = new BABYLON.DirectionalLight('dir', new BABYLON.Vector3(-0.3, -1, 0.4), scene);
+        dir.intensity = 0.6;
+        dir.diffuse = new BABYLON.Color3(1, 0.95, 0.85);
+
+        // Skybox — inverted box with emissive gradient
+        skybox = BABYLON.MeshBuilder.CreateBox('skybox', { size: 400 }, scene);
+        var skyMat = new BABYLON.StandardMaterial('skyMat', scene);
+        skyMat.backFaceCulling = false;
+        skyMat.disableLighting = true;
+        skyMat.emissiveColor = new BABYLON.Color3(0.45, 0.65, 0.95);
+        skyMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        skyMat.specularColor = new BABYLON.Color3(0, 0, 0);
+        skybox.material = skyMat;
+        skybox.infiniteDistance = true;
+
+        // Ground
+        ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 200, height: 200 }, scene);
+        var groundMat = new BABYLON.StandardMaterial('groundMat', scene);
+        groundMat.diffuseColor = new BABYLON.Color3(0.18, 0.32, 0.14);
+        groundMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+        ground.material = groundMat;
+        ground.position.y = -2;
+
+        // Launcher (fairground booth prop)
+        createLauncher();
+
+        // Crosshair mesh (small sphere at camera center, parented)
+        crosshairMesh = BABYLON.MeshBuilder.CreateSphere('crosshairMesh', { diameter: 0.04 }, scene);
+        var chMat = new BABYLON.StandardMaterial('chMat', scene);
+        chMat.emissiveColor = new BABYLON.Color3(1, 0.2, 0.2);
+        chMat.disableLighting = true;
+        crosshairMesh.material = chMat;
+        crosshairMesh.parent = camera;
+        crosshairMesh.position = new BABYLON.Vector3(0, 0, 2);
+
+        // Input
+        setupInput();
+
+        // Render loop
+        scene.onBeforeRenderObservable.add(function() {
+          var dt = engine.getDeltaTime() / 1000;
+          if (dt > 0.1) dt = 0.1; // clamp
+          update(dt);
+        });
+
+        return scene;
+      }
+
+      function createLauncher() {
+        launcherGroup = new BABYLON.TransformNode('launcherGroup', scene);
+
+        // Base box
+        var base = BABYLON.MeshBuilder.CreateBox('launcherBase', { width: 1.2, height: 0.6, depth: 0.8 }, scene);
+        base.parent = launcherGroup;
+        base.position = new BABYLON.Vector3(0, -1.5, -3);
+        var baseMat = new BABYLON.StandardMaterial('baseMat', scene);
+        baseMat.diffuseColor = new BABYLON.Color3(0.45, 0.25, 0.15);
+        base.material = baseMat;
+
+        // Barrel cylinder
+        var barrel = BABYLON.MeshBuilder.CreateCylinder('launcherBarrel', { height: 1.4, diameter: 0.35 }, scene);
+        barrel.parent = launcherGroup;
+        barrel.position = new BABYLON.Vector3(0, -0.7, -3);
+        barrel.rotation.x = Math.PI / 2;
+        var barrelMat = new BABYLON.StandardMaterial('barrelMat', scene);
+        barrelMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.35);
+        barrelMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+        barrel.material = barrelMat;
+
+        // Two side posts
+        for (var i = -1; i <= 1; i += 2) {
+          var post = BABYLON.MeshBuilder.CreateCylinder('post' + i, { height: 1.8, diameter: 0.15 }, scene);
+          post.parent = launcherGroup;
+          post.position = new BABYLON.Vector3(i * 0.8, -1.0, -3);
+          var postMat = new BABYLON.StandardMaterial('postMat' + i, scene);
+          postMat.diffuseColor = new BABYLON.Color3(0.5, 0.3, 0.2);
+          post.material = postMat;
+        }
+      }
+
+      // ============================================================
+      // BALLOON CREATION
+      // ============================================================
+      var balloonColors = [
+        new BABYLON.Color3(0.95, 0.2, 0.2),
+        new BABYLON.Color3(0.2, 0.5, 0.95),
+        new BABYLON.Color3(0.95, 0.85, 0.2),
+        new BABYLON.Color3(0.3, 0.85, 0.3),
+        new BABYLON.Color3(0.85, 0.3, 0.85),
+        new BABYLON.Color3(0.95, 0.55, 0.15),
+        new BABYLON.Color3(0.2, 0.85, 0.85),
+        new BABYLON.Color3(0.95, 0.4, 0.6)
       ];
 
-      const player = BABYLON.MeshBuilder.CreateBox("craft", { width: 1.6, height: 0.5, depth: 2.4 }, scene);
-      player.position.set(0, 0.6, 0);
-      const pmat = new BABYLON.StandardMaterial("pmat", scene);
-      pmat.diffuseColor = new BABYLON.Color3(0.15, 0.7, 0.95);
-      pmat.emissiveColor = new BABYLON.Color3(0.05, 0.25, 0.4);
-      player.material = pmat;
-      const nose = BABYLON.MeshBuilder.CreateBox("nose", { width: 0.5, height: 0.25, depth: 0.7 }, scene);
-      nose.parent = player;
-      nose.position.set(0, 0.15, 1.3);
-      const nmat = new BABYLON.StandardMaterial("nmat", scene);
-      nmat.emissiveColor = new BABYLON.Color3(1, 0.55, 0.15);
-      nose.material = nmat;
-      camera.lockedTarget = player;
+      function spawnBalloon() {
+        var isSmall = Math.random() < SMALL_BALLOON_CHANCE;
+        var scale = isSmall ? 0.55 : 1.0;
+        var diameter = 1.0 * scale;
 
-      const keys = Object.create(null);
-      window.addEventListener("keydown", (e) => { keys[e.code] = true; });
-      window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+        var balloon = BABYLON.MeshBuilder.CreateSphere('balloon', {
+          diameter: diameter,
+          segments: 12
+        }, scene);
 
-      let state = "menu";
-      let score = 0;
-      let orbsLeft = 0;
-      let timeLeft = 60;
-      let vel = new BABYLON.Vector3(0, 0, 0);
-      let yaw = 0;
-      let orbs = [];
-      let sentries = [];
+        // Teardrop shape: scale Y
+        balloon.scaling.y = 1.25;
 
-      function rand(min, max) { return min + Math.random() * (max - min); }
+        var color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
+        var mat = new BABYLON.StandardMaterial('balloonMat', scene);
+        mat.diffuseColor = color;
+        mat.specularColor = new BABYLON.Color3(0.6, 0.6, 0.6);
+        mat.specularPower = 64;
+        mat.emissiveColor = color.scale(0.15);
+        balloon.material = mat;
 
-      function clearMeshes(list) {
-        list.forEach((m) => m.dispose());
-        list.length = 0;
+        // String
+        var string = BABYLON.MeshBuilder.CreateCylinder('string', {
+          height: 0.8 * scale,
+          diameter: 0.02
+        }, scene);
+        string.parent = balloon;
+        string.position.y = -0.75 * scale;
+        var stringMat = new BABYLON.StandardMaterial('stringMat', scene);
+        stringMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+        stringMat.emissiveColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+        string.material = stringMat;
+
+        // Spawn position
+        var x = (Math.random() - 0.5) * 2 * SPAWN_X_RANGE;
+        var z = SPAWN_Z_MIN + Math.random() * (SPAWN_Z_MAX - SPAWN_Z_MIN);
+        balloon.position = new BABYLON.Vector3(x, SPAWN_Y, z);
+
+        // Velocity: fly upward and away (negative Z)
+        var speed = BALLOON_BASE_SPEED + game.wave * BALLOON_SPEED_PER_WAVE;
+        if (isSmall) speed *= 1.6;
+        var vel = new BABYLON.Vector3(
+          (Math.random() - 0.5) * 0.8,
+          speed,
+          -speed * 0.6 - Math.random() * 0.5
+        );
+
+        var balloonData = {
+          mesh: balloon,
+          string: string,
+          velocity: vel,
+          isSmall: isSmall,
+          swayPhase: Math.random() * Math.PI * 2,
+          swayAmp: 0.3 + Math.random() * 0.4,
+          alive: true,
+          baseX: x
+        };
+
+        balloons.push(balloonData);
+        game.balloonsAlive++;
+        game.balloonsSpawned++;
       }
 
-      function spawnOrbs(count) {
-        clearMeshes(orbs);
-        for (let i = 0; i < count; i++) {
-          const orb = BABYLON.MeshBuilder.CreateSphere("orb" + i, { diameter: 1.1 }, scene);
-          orb.position.set(rand(-32, 32), 1.1, rand(-32, 32));
-          const mat = new BABYLON.StandardMaterial("omat" + i, scene);
-          mat.emissiveColor = new BABYLON.Color3(0.2 + Math.random() * 0.4, 0.8, 0.4 + Math.random() * 0.5);
-          mat.diffuseColor = mat.emissiveColor;
-          orb.material = mat;
-          orbs.push(orb);
+      // ============================================================
+      // PARTICLE BURST
+      // ============================================================
+      function createPopBurst(position, color) {
+        try {
+          var ps = new BABYLON.ParticleSystem('pop', 40, scene);
+          ps.emitter = position.clone();
+          ps.minSize = 0.08;
+          ps.maxSize = 0.22;
+          ps.minLifeTime = 0.2;
+          ps.maxLifeTime = 0.5;
+          ps.emitRate = 200;
+          ps.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+          ps.gravity = new BABYLON.Vector3(0, -6, 0);
+          ps.direction1 = new BABYLON.Vector3(-3, 3, -3);
+          ps.direction2 = new BABYLON.Vector3(3, 6, 3);
+          ps.minEmitPower = 2;
+          ps.maxEmitPower = 6;
+          ps.color1 = new BABYLON.Color4(color.r, color.g, color.b, 1);
+          ps.color2 = new BABYLON.Color4(1, 1, 1, 1);
+          ps.colorDead = new BABYLON.Color4(color.r, color.g, color.b, 0);
+          ps.updateSpeed = 0.02;
+          ps.manualEmitCount = 40;
+          ps.disposeOnStop = true;
+          ps.start();
+          particleSystems.push(ps);
+          setTimeout(function() {
+            try { ps.stop(); } catch (e) {}
+            var idx = particleSystems.indexOf(ps);
+            if (idx >= 0) particleSystems.splice(idx, 1);
+          }, 600);
+        } catch (e) {
+          // particles are cosmetic
         }
-        orbsLeft = orbs.length;
-        orbsEl.textContent = String(orbsLeft);
       }
 
-      function spawnSentries(count) {
-        clearMeshes(sentries);
-        for (let i = 0; i < count; i++) {
-          const s = BABYLON.MeshBuilder.CreateSphere("s" + i, { diameter: 1.6 }, scene);
-          s.position.set(rand(-30, 30), 1.0, rand(-30, 30));
-          const mat = new BABYLON.StandardMaterial("smat" + i, scene);
-          mat.emissiveColor = new BABYLON.Color3(0.95, 0.15, 0.25);
-          s.material = mat;
-          s.metadata = { angle: Math.random() * Math.PI * 2, speed: 4 + Math.random() * 4 };
-          sentries.push(s);
+      // ============================================================
+      // INPUT
+      // ============================================================
+      function setupInput() {
+        // Pointer move for aiming
+        canvas.addEventListener('mousemove', function(e) {
+          if (game.state !== STATE.PLAYING) return;
+          var rect = canvas.getBoundingClientRect();
+          var nx = (e.clientX - rect.left) / rect.width;  // 0..1
+          var ny = (e.clientY - rect.top) / rect.height;   // 0..1
+          targetYaw = (nx - 0.5) * 2 * MAX_YAW;
+          targetPitch = -(ny - 0.5) * 2 * MAX_PITCH_UP;
+          if (targetPitch < -MAX_PITCH_DOWN) targetPitch = -MAX_PITCH_DOWN;
+        });
+
+        // Touch support
+        canvas.addEventListener('touchmove', function(e) {
+          if (game.state !== STATE.PLAYING) return;
+          if (e.touches.length > 0) {
+            var rect = canvas.getBoundingClientRect();
+            var nx = (e.touches[0].clientX - rect.left) / rect.width;
+            var ny = (e.touches[0].clientY - rect.top) / rect.height;
+            targetYaw = (nx - 0.5) * 2 * MAX_YAW;
+            targetPitch = -(ny - 0.5) * 2 * MAX_PITCH_UP;
+            if (targetPitch < -MAX_PITCH_DOWN) targetPitch = -MAX_PITCH_DOWN;
+          }
+          e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchstart', function(e) {
+          if (game.state === STATE.PLAYING) {
+            fire();
+          }
+          e.preventDefault();
+        }, { passive: false });
+
+        // Click to fire
+        canvas.addEventListener('mousedown', function(e) {
+          if (e.button === 0 && game.state === STATE.PLAYING) {
+            fire();
+          }
+        });
+
+        // Keyboard
+        window.addEventListener('keydown', function(e) {
+          if (e.key === ' ' || e.code === 'Space') {
+            e.preventDefault();
+            if (game.state === STATE.PLAYING) fire();
+            else if (game.state === STATE.MENU) startGame();
+            else if (game.state === STATE.GAME_OVER || game.state === STATE.VICTORY) startGame();
+          } else if (e.key === 'r' || e.key === 'R') {
+            if (game.state === STATE.PLAYING) reload();
+          } else if (e.key === 'Escape') {
+            if (game.state === STATE.PLAYING) pauseGame();
+            else if (game.state === STATE.PAUSED) resumeGame();
+          } else if (e.key === 'Enter') {
+            if (game.state === STATE.MENU) startGame();
+            else if (game.state === STATE.GAME_OVER || game.state === STATE.VICTORY) startGame();
+          }
+        });
+
+        // Buttons
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+        document.getElementById('retryBtn').addEventListener('click', startGame);
+        document.getElementById('playAgainBtn').addEventListener('click', startGame);
+      }
+
+      // ============================================================
+      // FIRING
+      // ============================================================
+      function fire() {
+        if (game.state !== STATE.PLAYING) return;
+        if (game.reloading) return;
+
+        if (game.ammo <= 0) {
+          playSound('empty');
+          return;
         }
-      }
 
-      function resetGame() {
-        score = 0;
-        timeLeft = 60;
-        vel.set(0, 0, 0);
-        yaw = 0;
-        player.position.set(0, 0.6, 0);
-        player.rotation.set(0, 0, 0);
-        spawnOrbs(10);
-        spawnSentries(4);
-        scoreEl.textContent = "0";
-        timeEl.textContent = "60";
-      }
+        game.ammo--;
+        updateHUD();
+        playSound('shoot');
 
-      function endGame(won) {
-        state = "over";
-        overlay.classList.remove("hidden");
-        titleEl.textContent = won ? "CLEAN SWEEP" : "SIGNAL LOST";
-        blurbEl.textContent = won
-          ? "You vacuumed the sector. Score " + score + "."
-          : "The sentries tagged you or time ran out. Score " + score + ".";
-        startBtn.textContent = "PLAY AGAIN";
-      }
+        // Ray from camera through crosshair
+        var ray = scene.createPickingRay(
+          engine.getRenderWidth() / 2,
+          engine.getRenderHeight() / 2,
+          BABYLON.Matrix.Identity(),
+          camera
+        );
 
-      function startGame() {
-        resetGame();
-        state = "play";
-        overlay.classList.add("hidden");
-        canvas.focus();
-      }
+        // Check each balloon with sphere intersection
+        var hit = null;
+        var hitDist = Infinity;
 
-      startBtn.addEventListener("click", startGame);
+        for (var i = 0; i < balloons.length; i++) {
+          var b = balloons[i];
+          if (!b.alive || !b.mesh) continue;
 
-      let acc = 0;
-      scene.onBeforeRenderObservable.add(() => {
-        const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
-        if (state !== "play") return;
+          var center = b.mesh.position;
+          var radius = (b.mesh.scaling.y * 0.5) + 0.15; // generous hit radius
 
-        acc += dt;
-        if (acc >= 1) {
-          acc -= 1;
-          timeLeft -= 1;
-          timeEl.textContent = String(Math.max(0, timeLeft));
-          if (timeLeft <= 0) endGame(false);
-        }
+          var toCenter = center.subtract(ray.origin);
+          var t = BABYLON.Vector3.Dot(toCenter, ray.direction);
+          if (t < 0) continue;
 
-        const forward = (keys.KeyW || keys.ArrowUp) ? 1 : (keys.KeyS || keys.ArrowDown) ? -1 : 0;
-        const turn = (keys.KeyA || keys.ArrowLeft) ? 1 : (keys.KeyD || keys.ArrowRight) ? -1 : 0;
-        const boost = (keys.ShiftLeft || keys.ShiftRight) ? 1.8 : 1;
-        yaw += turn * 2.4 * dt;
-        player.rotation.y = yaw;
-        const dirv = new BABYLON.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
-        vel = vel.scale(0.90).add(dirv.scale(forward * 28 * boost * dt));
-        player.position.addInPlace(vel.scale(dt));
-        player.position.x = Math.max(-38, Math.min(38, player.position.x));
-        player.position.z = Math.max(-38, Math.min(38, player.position.z));
-        player.position.y = 0.6 + Math.sin(performance.now() * 0.006) * 0.08;
+          var closest = ray.origin.add(ray.direction.scale(t));
+          var dist = BABYLON.Vector3.Distance(closest, center);
 
-        for (let i = orbs.length - 1; i >= 0; i--) {
-          const o = orbs[i];
-          o.position.y = 1.1 + Math.sin(performance.now() * 0.004 + i) * 0.25;
-          o.rotation.y += dt * 2;
-          if (BABYLON.Vector3.Distance(player.position, o.position) < 1.7) {
-            o.dispose();
-            orbs.splice(i, 1);
-            score += 100;
-            orbsLeft = orbs.length;
-            scoreEl.textContent = String(score);
-            orbsEl.textContent = String(orbsLeft);
-            if (orbsLeft === 0) endGame(true);
+          if (dist < radius && t < hitDist) {
+            hit = b;
+            hitDist = t;
           }
         }
 
-        sentries.forEach((s, i) => {
-          s.metadata.angle += dt * 0.6;
-          s.position.x += Math.cos(s.metadata.angle) * s.metadata.speed * dt;
-          s.position.z += Math.sin(s.metadata.angle + i) * s.metadata.speed * dt;
-          s.position.x = Math.max(-36, Math.min(36, s.position.x));
-          s.position.z = Math.max(-36, Math.min(36, s.position.z));
-          if (BABYLON.Vector3.Distance(player.position, s.position) < 1.8) endGame(false);
-        });
-      });
+        if (hit) {
+          popBalloon(hit);
+        } else {
+          // Miss — reset combo
+          game.combo = 0;
+          game.comboTimer = 0;
+          updateHUD();
+        }
 
-      engine.runRenderLoop(() => scene.render());
-      window.addEventListener("resize", () => engine.resize());
-      window.__GAME_OK__ = true;
-    })();
-  </script>
-</body>
-</html>
+        // Auto-reload when empty
+        if (game.ammo <= 0 && !game.reloading) {
+          reload();
+        }
+      }
+
+      function popBalloon(b) {
+        if (!b || !b.alive) return;
+        b.alive = false;
+        game.balloonsPopped++;
+        game.balloonsAlive--;
+
+        // Combo
+        game.combo++;
+        game.comboTimer = COMBO_TIMEOUT;
+
+        var points = b.isSmall ? 25 : 10;
+        var multiplier = Math.max(1, game.combo);
+        game.score += points * multiplier;
+
+        // Particle burst
+        var color = new BABYLON.Color3(1, 0.5, 0.2);
+        if (b.mesh && b.mesh.material && b.mesh.material.diffuseColor) {
+          color = b.mesh.material.diffuseColor;
+        }
+        createPopBurst(b.mesh.position.clone(), color);
+
+        // Remove mesh
+        if (b.mesh) {
+          if (b.string) {
+            try { b.string.dispose(); } catch (e) {}
+          }
+          try { b.mesh.dispose(); } catch (e) {}
+        }
+
+        playSound('pop');
+        updateHUD();
+
+        // Check wave clear
+        checkWaveClear();
+      }
+
+      function reload() {
+        if (game.reloading) return;
+        if (game.ammo >= MAX_AMMO) return;
+        game.reloading = true;
