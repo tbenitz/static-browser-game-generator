@@ -1,843 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Neon Tic-Tac-Toe — Human vs AI</title>
-<style>
-  :root{
-    --cyan:#22e6ff;
-    --magenta:#ff3df0;
-    --bg:#05060c;
-  }
-  *{ box-sizing:border-box; }
-  html,body{
-    margin:0; padding:0; width:100%; height:100%;
-    background:radial-gradient(circle at 50% 40%, #0b1024 0%, #05060c 70%);
-    overflow:hidden;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, monospace;
-    color:#e8f6ff;
-    -webkit-user-select:none; user-select:none;
-    touch-action:none;
-  }
-  #renderCanvas{
-    position:absolute; inset:0;
-    width:100%; height:100%;
-    display:block;
-    outline:none;
-    touch-action:none;
-  }
-  #hud{
-    position:absolute; inset:0;
-    pointer-events:none;
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:flex-start;
-    padding:14px;
-  }
-  #topbar{
-    width:100%; max-width:760px;
-    display:flex; flex-direction:column; align-items:center; gap:6px;
-    text-shadow:0 0 10px rgba(34,230,255,.55);
-  }
-  #score{
-    font-size:clamp(14px,2.4vw,20px);
-    letter-spacing:1px;
-    font-weight:700;
-    background:rgba(6,12,26,.55);
-    border:1px solid rgba(34,230,255,.35);
-    border-radius:999px;
-    padding:6px 16px;
-    backdrop-filter:blur(4px);
-  }
-  #score .you{ color:var(--cyan); }
-  #score .ai{ color:var(--magenta); }
-  #score .draw{ color:#c9d6e6; }
-  #turn{
-    font-size:clamp(12px,2vw,16px);
-    letter-spacing:2px;
-    text-transform:uppercase;
-    opacity:.9;
-    min-height:1.2em;
-  }
-  #turn.you{ color:var(--cyan); text-shadow:0 0 12px rgba(34,230,255,.8); }
-  #turn.ai{ color:var(--magenta); text-shadow:0 0 12px rgba(255,61,240,.8); }
-  #hint{
-    position:absolute; bottom:10px; left:0; right:0;
-    text-align:center; font-size:12px; opacity:.45; letter-spacing:1px;
-  }
-  #modalWrap{
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    pointer-events:none;
-    opacity:0;
-    transition:opacity .25s ease;
-  }
-  #modalWrap.show{ opacity:1; pointer-events:auto; }
-  #modal{
-    pointer-events:auto;
-    min-width:min(88vw,420px);
-    max-width:min(92vw,520px);
-    padding:26px 26px 22px;
-    border-radius:18px;
-    text-align:center;
-    background:linear-gradient(160deg, rgba(10,18,38,.92), rgba(6,8,18,.94));
-    border:1px solid rgba(34,230,255,.35);
-    box-shadow:0 0 40px rgba(34,230,255,.18), inset 0 0 40px rgba(255,61,240,.06);
-    backdrop-filter:blur(6px);
-  }
-  #modal h1{
-    margin:0 0 6px;
-    font-size:clamp(24px,5vw,40px);
-    letter-spacing:3px;
-    background:linear-gradient(90deg,var(--cyan),var(--magenta));
-    -webkit-background-clip:text; background-clip:text;
-    -webkit-text-fill-color:transparent; color:transparent;
-    filter:drop-shadow(0 0 14px rgba(34,230,255,.35));
-  }
-  #modal h2{
-    margin:0 0 10px;
-    font-size:clamp(18px,4vw,28px);
-    letter-spacing:2px;
-  }
-  #modal p{
-    margin:8px 0;
-    font-size:clamp(13px,2.2vw,16px);
-    line-height:1.5;
-    opacity:.9;
-  }
-  #modal .sub{ opacity:.6; font-size:12px; letter-spacing:1px; }
-  .btn{
-    display:inline-block;
-    margin-top:16px;
-    padding:12px 26px;
-    border-radius:999px;
-    border:1px solid rgba(34,230,255,.6);
-    background:rgba(34,230,255,.08);
-    color:#eafcff;
-    font-size:clamp(13px,2.2vw,16px);
-    letter-spacing:2px;
-    text-transform:uppercase;
-    cursor:pointer;
-    transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
-    box-shadow:0 0 18px rgba(34,230,255,.18);
-  }
-  .btn:hover{ background:rgba(34,230,255,.2); box-shadow:0 0 26px rgba(34,230,255,.4); }
-  .btn:active{ transform:scale(.96); }
-  .btn.magenta{
-    border-color:rgba(255,61,240,.6);
-    background:rgba(255,61,240,.08);
-    box-shadow:0 0 18px rgba(255,61,240,.18);
-  }
-  .btn.magenta:hover{ background:rgba(255,61,240,.2); box-shadow:0 0 26px rgba(255,61,240,.4); }
-  #fatal{
-    position:absolute; inset:0; display:none;
-    align-items:center; justify-content:center;
-    background:#05060c; color:#ff8080; font-size:16px; text-align:center; padding:20px;
-    z-index:50;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Studio</title>
+  <style>
+    :root {
+      --bg: #07090f;
+      --line: #2a3650;
+      --text: #e8eefc;
+      --muted: #9aa8c2;
+      --accent: #6ee7ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, sans-serif; }
+    body { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; min-height: 100%; }
+    aside {
+      border-right: 1px solid var(--line);
+      padding: 18px;
+      display: flex; flex-direction: column; gap: 12px;
+      overflow: auto;
+    }
+    h1 { margin: 0; font-size: 22px; letter-spacing: .06em; }
+    p, label { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    label { display: block; margin-bottom: 6px; }
+    textarea, input {
+      width: 100%; background: #0b1020; color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+      font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 0; border-radius: 10px; padding: 10px 12px;
+      background: var(--accent); color: #041018; font-weight: 700; cursor: pointer;
+    }
+    button.secondary { background: #1b2438; color: var(--text); }
+    button:disabled { opacity: .55; cursor: wait; }
+    #status {
+      white-space: pre-wrap; font-size: 12px; color: #c9d7f0;
+      background: #0b1020; border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px; min-height: 72px;
+    }
+    main { position: relative; min-height: 100vh; }
+    iframe { border: 0; width: 100%; height: 100%; background: #000; }
+    @media (max-width: 860px) {
+      body { grid-template-columns: 1fr; }
+      main { min-height: 70vh; }
+    }
+  </style>
 </head>
 <body>
-<canvas id="renderCanvas" touch-action="none"></canvas>
-
-<div id="hud">
-  <div id="topbar">
-    <div id="score">
-      <span class="you">You 0</span> &nbsp;—&nbsp; <span class="ai">AI 0</span> &nbsp;—&nbsp; <span class="draw">Draws 0</span>
+  <aside>
+    <h1>GAME STUDIO</h1>
+    <p>A basic game loads on the right. Type a new idea to generate another one in this browser. That uses <strong>your</strong> DeepSeek key on your machine only — it is not stored in this repo and is not published to GitHub Pages.</p>
+    <div>
+      <label for="idea">Game idea</label>
+      <textarea id="idea" placeholder="Example: bowling alley, first-person, knock down 10 pins, keep score"></textarea>
     </div>
-    <div id="turn"></div>
-  </div>
-  <div id="hint">Click a cell or press 1–9 &nbsp;•&nbsp; Enter = start / restart &nbsp;•&nbsp; Esc = menu</div>
-</div>
-
-<div id="modalWrap" class="show">
-  <div id="modal">
-    <h1>NEON TIC-TAC-TOE</h1>
-    <p>You are <b style="color:#22e6ff">X</b> &nbsp;•&nbsp; AI is <b style="color:#ff3df0">O</b></p>
-    <p class="sub">First to 5 wins takes the match.</p>
-    <button class="btn" id="startBtn">Start Match</button>
-  </div>
-</div>
-
-<div id="fatal">Failed to initialize the 3D engine. Please check your connection / browser support.</div>
-
-<script src="https://cdn.babylonjs.com/babylon.js"></script>
-<script>
-(function () {
-  "use strict";
-
-  // ---------------------------------------------------------------------------
-  // Boot safety
-  // ---------------------------------------------------------------------------
-  var fatalEl = document.getElementById("fatal");
-  function fatal(msg) {
-    if (fatalEl) {
-      fatalEl.style.display = "flex";
-      fatalEl.textContent = msg || "Failed to initialize.";
+    <div>
+      <label for="key">Your DeepSeek API key</label>
+      <input id="key" type="password" autocomplete="off" placeholder="sk-..." />
+    </div>
+    <label><input id="remember" type="checkbox" /> Remember key in this browser only</label>
+    <label><input id="extra" type="checkbox" /> Extra review pass</label>
+    <div class="row">
+      <button id="genBtn" type="button">Generate in this browser</button>
+      <button id="resetBtn" class="secondary" type="button">Reload published game</button>
+    </div>
+    <p>To publish a game for everyone, use Actions. Type your own idea in the form before you run it.</p>
+    <div class="row">
+      <button id="actionsBtn" class="secondary" type="button">Open Generate Action</button>
+      <button id="dlBtn" class="secondary" type="button">Download HTML</button>
+    </div>
+    <div id="status">Ready. Published game is loaded.</div>
+  </aside>
+  <main>
+    <iframe id="play" title="Game" src="game.html" allow="fullscreen"></iframe>
+  </main>
+  <script>
+    const ideaEl = document.getElementById("idea");
+    const keyEl = document.getElementById("key");
+    const rememberEl = document.getElementById("remember");
+    const extraEl = document.getElementById("extra");
+    const statusEl = document.getElementById("status");
+    const play = document.getElementById("play");
+    const genBtn = document.getElementById("genBtn");
+    let lastHtml = "";
+    const saved = localStorage.getItem("ds_key");
+    if (saved) { keyEl.value = saved; rememberEl.checked = true; }
+    function log(msg) { statusEl.textContent = msg; }
+    const ARCHITECT = "You are a Static Web Engine Architect for single-file Babylon.js browser games. Plan ONLY the user's idea. Do not turn it into a neon hover-craft orb arena unless they asked for that. Constraints: one HTML file, Babylon.js CDN script tags, no external asset files, procedural visuals, Web Audio only, works on file:// and GitHub Pages subpaths, start/play/game-over states. Output a short plan: fantasy + win/lose, scene graph, input, states, movement, HUD.";
+    const CODEGEN = "Write EXACTLY one complete index.html file. No markdown fences. No commentary. Hard rules: single file, inline CSS/JS; script src https://cdn.babylonjs.com/babylon.js; optional GUI/cannon from same CDN; implement the USER IDEA literally; do not substitute a different game; do not default to orbs, hover-craft, or neon unless the idea says so; no relative asset fetches; canvas id=renderCanvas; BABYLON.Engine; runRenderLoop; resize handler; no import/export; set window.__GAME_OK__ = true after engine/scene init.";
+    const FIX = "Return ONLY the full corrected index.html. No markdown fences. Keep a single-file serverless HTML game. Implement the original user idea, not a different fallback game.";
+    function stripFences(text) {
+      let out = String(text || "").trim();
+      if (out.startsWith("```")) out = out.replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
+      const start = out.indexOf("<!DOCTYPE html>");
+      const start2 = out.toLowerCase().indexOf("<html");
+      if (start >= 0) out = out.slice(start);
+      else if (start2 >= 0) out = out.slice(start2);
+      return out.trim();
     }
-  }
-
-  if (typeof BABYLON === "undefined") {
-    fatal("Babylon.js failed to load. Check your network connection.");
-    return;
-  }
-
-  var canvas = document.getElementById("renderCanvas");
-  if (!canvas) { fatal("Canvas element missing."); return; }
-
-  // ---------------------------------------------------------------------------
-  // Engine + Scene
-  // ---------------------------------------------------------------------------
-  var engine, scene;
-  try {
-    engine = new BABYLON.Engine(canvas, true, {
-      preserveDrawingBuffer: true,
-      stencil: true,
-      antialias: true
-    }, true);
-  } catch (e) {
-    fatal("WebGL not available: " + (e && e.message ? e.message : e));
-    return;
-  }
-
-  scene = new BABYLON.Scene(engine);
-  scene.clearColor = new BABYLON.Color4(0.02, 0.024, 0.05, 1.0);
-
-  // ---------------------------------------------------------------------------
-  // Camera + Lights
-  // ---------------------------------------------------------------------------
-  var camera = new BABYLON.ArcRotateCamera(
-    "cam",
-    -Math.PI / 2,
-    Math.PI / 2.6,
-    11.5,
-    new BABYLON.Vector3(0, 0, 0),
-    scene
-  );
-  camera.attachControl(canvas, true);
-  camera.lowerRadiusLimit = 9.0;
-  camera.upperRadiusLimit = 15.0;
-  camera.lowerBetaLimit = Math.PI / 3.6;
-  camera.upperBetaLimit = Math.PI / 2.05;
-  camera.lowerAlphaLimit = -Math.PI / 2 - 0.55;
-  camera.upperAlphaLimit = -Math.PI / 2 + 0.55;
-  camera.wheelPrecision = 40;
-  camera.panningSensibility = 0;
-  camera.useBouncingBehavior = false;
-  camera.inertia = 0.85;
-
-  var hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
-  hemi.intensity = 0.55;
-  hemi.diffuse = new BABYLON.Color3(0.55, 0.7, 1.0);
-  hemi.groundColor = new BABYLON.Color3(0.05, 0.05, 0.12);
-
-  var point = new BABYLON.PointLight("pt", new BABYLON.Vector3(0, 4.5, -3.5), scene);
-  point.intensity = 0.9;
-  point.diffuse = new BABYLON.Color3(0.4, 0.85, 1.0);
-
-  var point2 = new BABYLON.PointLight("pt2", new BABYLON.Vector3(3.5, -2.5, 3.0), scene);
-  point2.intensity = 0.7;
-  point2.diffuse = new BABYLON.Color3(1.0, 0.35, 0.95);
-
-  var glow = new BABYLON.GlowLayer("glow", scene);
-  glow.intensity = 1.1;
-
-  // ---------------------------------------------------------------------------
-  // Materials
-  // ---------------------------------------------------------------------------
-  function makeMat(name, color, emissive) {
-    var m = new BABYLON.StandardMaterial(name, scene);
-    m.diffuseColor = color;
-    m.emissiveColor = emissive || color.scale(0.35);
-    m.specularColor = new BABYLON.Color3(0.35, 0.35, 0.4);
-    return m;
-  }
-
-  var matBoard = new BABYLON.StandardMaterial("matBoard", scene);
-  matBoard.diffuseColor = new BABYLON.Color3(0.05, 0.07, 0.13);
-  matBoard.emissiveColor = new BABYLON.Color3(0.01, 0.02, 0.05);
-  matBoard.specularColor = new BABYLON.Color3(0.15, 0.2, 0.3);
-
-  var matGrid = makeMat("matGrid", new BABYLON.Color3(0.13, 0.9, 1.0), new BABYLON.Color3(0.13, 0.9, 1.0));
-  var matX = makeMat("matX", new BABYLON.Color3(0.13, 0.9, 1.0), new BABYLON.Color3(0.13, 0.9, 1.0));
-  var matO = makeMat("matO", new BABYLON.Color3(1.0, 0.24, 0.94), new BABYLON.Color3(1.0, 0.24, 0.94));
-  var matWin = makeMat("matWin", new BABYLON.Color3(1.0, 0.95, 0.4), new BABYLON.Color3(1.0, 0.95, 0.4));
-
-  // ---------------------------------------------------------------------------
-  // Board geometry
-  // ---------------------------------------------------------------------------
-  var CELL = 2.0;      // cell size
-  var GAP = 0.12;      // half thickness of grid lines
-  var BOARD_Y = 0;
-
-  var boardRoot = new BABYLON.TransformNode("boardRoot", scene);
-
-  var slab = BABYLON.MeshBuilder.CreateBox("slab", {
-    width: CELL * 3 + 0.9,
-    height: 0.35,
-    depth: CELL * 3 + 0.9
-  }, scene);
-  slab.material = matBoard;
-  slab.position.y = BOARD_Y - 0.22;
-  slab.parent = boardRoot;
-
-  // Grid lines: 2 vertical + 2 horizontal thin boxes on top of slab
-  var lineThickness = GAP * 2;
-  var lineLen = CELL * 3 + 0.5;
-  var lineY = BOARD_Y + 0.005;
-
-  function addLine(name, x, z, w, d) {
-    var l = BABYLON.MeshBuilder.CreateBox(name, { width: w, height: 0.06, depth: d }, scene);
-    l.material = matGrid;
-    l.position.set(x, lineY, z);
-    l.parent = boardRoot;
-    return l;
-  }
-  addLine("v1", -CELL / 2, 0, lineThickness, lineLen);
-  addLine("v2", CELL / 2, 0, lineThickness, lineLen);
-  addLine("h1", 0, -CELL / 2, lineLen, lineThickness);
-  addLine("h2", 0, CELL / 2, lineLen, lineThickness);
-
-  // ---------------------------------------------------------------------------
-  // Cells (pick planes) + marks
-  // ---------------------------------------------------------------------------
-  // index 0..8, row-major: 0 1 2 / 3 4 5 / 6 7 8
-  function cellCenter(i) {
-    var col = i % 3;
-    var row = Math.floor(i / 3);
-    return new BABYLON.Vector3(
-      (col - 1) * CELL,
-      BOARD_Y + 0.02,
-      (row - 1) * CELL
-    );
-  }
-
-  var pickPlanes = [];
-  var marks = [];       // marks[i] = mesh or null
-  var board = [];       // board[i] = "X" | "O" | null
-
-  for (var i = 0; i < 9; i++) {
-    board[i] = null;
-    marks[i] = null;
-
-    var p = BABYLON.MeshBuilder.CreatePlane("pick" + i, { size: CELL * 0.94 }, scene);
-    p.rotation.x = Math.PI / 2;
-    p.position = cellCenter(i);
-    p.isPickable = true;
-    p.visibility = 0;              // invisible but pickable
-    p.metadata = { cell: i };
-    p.parent = boardRoot;
-    pickPlanes.push(p);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Particle burst (procedural, no texture)
-  // ---------------------------------------------------------------------------
-  function makeSparkTexture() {
-    // 16x16 radial gradient via canvas -> data URL (no external asset)
-    var c = document.createElement("canvas");
-    c.width = 32; c.height = 32;
-    var ctx = c.getContext("2d");
-    var g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-    g.addColorStop(0, "rgba(255,255,255,1)");
-    g.addColorStop(0.35, "rgba(255,255,255,0.7)");
-    g.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 32, 32);
-    return c.toDataURL();
-  }
-  var sparkTex = makeSparkTexture();
-
-  function burst(pos, color) {
-    try {
-      var ps = new BABYLON.ParticleSystem("burst", 60, scene);
-      ps.particleTexture = new BABYLON.Texture(sparkTex, scene);
-      ps.emitter = pos.clone();
-      ps.minEmitBox = new BABYLON.Vector3(-0.1, -0.1, -0.1);
-      ps.maxEmitBox = new BABYLON.Vector3(0.1, 0.1, 0.1);
-      ps.color1 = new BABYLON.Color4(color.r, color.g, color.b, 1.0);
-      ps.color2 = new BABYLON.Color4(color.r * 0.6, color.g * 0.6, color.b * 0.6, 1.0);
-      ps.colorDead = new BABYLON.Color4(color.r, color.g, color.b, 0.0);
-      ps.minSize = 0.06;
-      ps.maxSize = 0.2;
-      ps.minLifeTime = 0.25;
-      ps.maxLifeTime = 0.6;
-      ps.emitRate = 900;
-      ps.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
-      ps.gravity = new BABYLON.Vector3(0, -3.0, 0);
-      ps.direction1 = new BABYLON.Vector3(-2, 2, -2);
-      ps.direction2 = new BABYLON.Vector3(2, 5, 2);
-      ps.minAngularSpeed = 0;
-      ps.maxAngularSpeed = Math.PI;
-      ps.minEmitPower = 1;
-      ps.maxEmitPower = 3;
-      ps.updateSpeed = 0.01;
-      ps.targetStopDuration = 0.12;
-      ps.disposeOnStop = true;
-      ps.start();
-      setTimeout(function () {
-        try { ps.stop(); } catch (e) {}
-      }, 140);
-    } catch (e) { /* particles are cosmetic */ }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Mark creation
-  // ---------------------------------------------------------------------------
-  function createX(pos) {
-    var root = new BABYLON.TransformNode("X", scene);
-    root.position = pos.clone();
-    root.parent = boardRoot;
-
-    var len = CELL * 0.62;
-    var th = 0.16;
-    var bar1 = BABYLON.MeshBuilder.CreateBox("xbar1", { width: len, height: 0.14, depth: th }, scene);
-    bar1.material = matX;
-    bar1.rotation.y = Math.PI / 4;
-    bar1.position.y = 0.12;
-    bar1.parent = root;
-
-    var bar2 = BABYLON.MeshBuilder.CreateBox("xbar2", { width: len, height: 0.14, depth: th }, scene);
-    bar2.material = matX;
-    bar2.rotation.y = -Math.PI / 4;
-    bar2.position.y = 0.12;
-    bar2.parent = root;
-
-    root.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
-    return root;
-  }
-
-  function createO(pos) {
-    var root = new BABYLON.TransformNode("O", scene);
-    root.position = pos.clone();
-    root.parent = boardRoot;
-
-    var torus = BABYLON.MeshBuilder.CreateTorus("otorus", {
-      diameter: CELL * 0.66,
-      thickness: 0.17,
-      tessellation: 40
-    }, scene);
-    torus.material = matO;
-    torus.position.y = 0.12;
-    torus.parent = root;
-
-    root.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
-    return root;
-  }
-
-  function animateScaleIn(node) {
-    if (!node) return;
-    var from = 0.01;
-    var to = 1.0;
-    var t = 0;
-    var dur = 0.28;
-    var obs = scene.onBeforeRenderObservable.add(function () {
-      if (!node || node.isDisposed()) {
-        scene.onBeforeRenderObservable.remove(obs);
-        return;
-      }
-      t += engine.getDeltaTime() / 1000;
-      var k = Math.min(1, t / dur);
-      // ease out back
-      var s = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
-      var v = from + (to - from) * (k < 1 ? s : 1);
-      node.scaling.set(v, v, v);
-      if (k >= 1) {
-        node.scaling.set(1, 1, 1);
-        scene.onBeforeRenderObservable.remove(obs);
-      }
-    });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Win detection
-  // ---------------------------------------------------------------------------
-  var LINES = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
-
-  function winnerOf(b) {
-    for (var i = 0; i < LINES.length; i++) {
-      var L = LINES[i];
-      var a = b[L[0]], c = b[L[1]], d = b[L[2]];
-      if (a && a === c && a === d) {
-        return { player: a, line: L };
-      }
-    }
-    return null;
-  }
-
-  function isFull(b) {
-    for (var i = 0; i < 9; i++) if (!b[i]) return false;
-    return true;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Minimax AI
-  // ---------------------------------------------------------------------------
-  function minimax(b, turn, depth) {
-    var w = winnerOf(b);
-    if (w) {
-      if (w.player === "O") return 10 - depth;
-      if (w.player === "X") return -10 + depth;
-    }
-    if (isFull(b)) return 0;
-
-    var best;
-    if (turn === "O") {
-      best = -Infinity;
-      for (var i = 0; i < 9; i++) {
-        if (!b[i]) {
-          b[i] = "O";
-          var s = minimax(b, "X", depth + 1);
-          b[i] = null;
-          if (s > best) best = s;
-        }
-      }
-    } else {
-      best = Infinity;
-      for (var j = 0; j < 9; j++) {
-        if (!b[j]) {
-          b[j] = "X";
-          var s2 = minimax(b, "O", depth + 1);
-          b[j] = null;
-          if (s2 < best) best = s2;
-        }
-      }
-    }
-    return best;
-  }
-
-  function bestAIMove(b) {
-    var bestScore = -Infinity;
-    var choices = [];
-    for (var i = 0; i < 9; i++) {
-      if (!b[i]) {
-        b[i] = "O";
-        var s = minimax(b, "X", 0);
-        b[i] = null;
-        if (s > bestScore) {
-          bestScore = s;
-          choices = [i];
-        } else if (s === bestScore) {
-          choices.push(i);
-        }
-      }
-    }
-    if (choices.length === 0) return -1;
-    return choices[Math.floor(Math.random() * choices.length)];
-  }
-
-  // ---------------------------------------------------------------------------
-  // Win line visual
-  // ---------------------------------------------------------------------------
-  var winLineMesh = null;
-  function showWinLine(line) {
-    clearWinLine();
-    if (!line || line.length < 3) return;
-    var a = cellCenter(line[0]);
-    var c = cellCenter(line[2]);
-    var mid = a.add(c).scale(0.5);
-    var dir = c.subtract(a);
-    var len = dir.length() + CELL * 0.55;
-    var angle = Math.atan2(dir.z, dir.x);
-
-    winLineMesh = BABYLON.MeshBuilder.CreateBox("winLine", {
-      width: len, height: 0.1, depth: 0.16
-    }, scene);
-    winLineMesh.material = matWin;
-    winLineMesh.position.set(mid.x, BOARD_Y + 0.28, mid.z);
-    winLineMesh.rotation.y = -angle;
-    winLineMesh.parent = boardRoot;
-
-    var t = 0;
-    var obs = scene.onBeforeRenderObservable.add(function () {
-      if (!winLineMesh || winLineMesh.isDisposed()) {
-        scene.onBeforeRenderObservable.remove(obs);
-        return;
-      }
-      t += engine.getDeltaTime() / 1000;
-      var pulse = 0.85 + 0.15 * Math.sin(t * 9);
-      winLineMesh.scaling.y = pulse;
-      winLineMesh.scaling.z = pulse;
-    });
-  }
-
-  function clearWinLine() {
-    if (winLineMesh) {
-      try { winLineMesh.dispose(); } catch (e) {}
-      winLineMesh = null;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Game state
-  // ---------------------------------------------------------------------------
-  var STATE = {
-    MENU: "MENU",
-    PLAYING: "PLAYING",
-    ROUND_END: "ROUND_END",
-    MATCH_OVER: "MATCH_OVER"
-  };
-
-  var state = STATE.MENU;
-  var humanTurn = true;
-  var aiThinking = false;
-  var roundLocked = false;
-  var scores = { wins: 0, losses: 0, draws: 0 };
-  var WIN_TARGET = 5;
-  var aiTimer = null;
-  var roundEndTimer = null;
-
-  // DOM refs
-  var scoreEl = document.getElementById("score");
-  var turnEl = document.getElementById("turn");
-  var modalWrap = document.getElementById("modalWrap");
-  var modalEl = document.getElementById("modal");
-
-  function updateScoreHUD() {
-    if (!scoreEl) return;
-    scoreEl.innerHTML =
-      '<span class="you">You ' + scores.wins + '</span> &nbsp;—&nbsp; ' +
-      '<span class="ai">AI ' + scores.losses + '</span> &nbsp;—&nbsp; ' +
-      '<span class="draw">Draws ' + scores.draws + '</span>';
-  }
-
-  function setTurnHUD(text, cls) {
-    if (!turnEl) return;
-    turnEl.textContent = text || "";
-    turnEl.className = cls || "";
-  }
-
-  function showModal(html) {
-    if (!modalWrap || !modalEl) return;
-    modalEl.innerHTML = html;
-    modalWrap.classList.add("show");
-    bindModalButtons();
-  }
-
-  function hideModal() {
-    if (!modalWrap) return;
-    modalWrap.classList.remove("show");
-  }
-
-  function bindModalButtons() {
-    if (!modalEl) return;
-    var b = modalEl.querySelector("[data-action]");
-    if (b) {
-      b.addEventListener("click", function () {
-        var act = b.getAttribute("data-action");
-        if (act === "start") startMatch();
-        else if (act === "next") nextRound();
-        else if (act === "menu") toMenu();
+    async function chat(apiKey, messages, maxTokens) {
+      const res = await fetch("https://api.deepseek.com/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+        body: JSON.stringify({ model: "deepseek-chat", messages, temperature: 0.4, max_tokens: maxTokens, stream: false })
       });
+      const body = await res.text();
+      if (!res.ok) throw new Error("DeepSeek HTTP " + res.status + ": " + body.slice(0, 280));
+      const data = JSON.parse(body);
+      const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!content) throw new Error("Empty model response.");
+      return content;
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Board helpers
-  // ---------------------------------------------------------------------------
-  function clearBoard() {
-    clearWinLine();
-    for (var i = 0; i < 9; i++) {
-      if (marks[i]) {
-        try { marks[i].dispose(false, true); } catch (e) {}
-        marks[i] = null;
+    function showGame(html) { lastHtml = html; play.srcdoc = html; }
+    document.getElementById("resetBtn").onclick = () => {
+      lastHtml = "";
+      play.removeAttribute("srcdoc");
+      play.src = "game.html";
+      log("Reloaded the published game.");
+    };
+    document.getElementById("actionsBtn").onclick = () => {
+      window.open("https://github.com/tbenitz/static-browser-game-generator/actions/workflows/generate.yml", "_blank");
+    };
+    document.getElementById("dlBtn").onclick = () => {
+      if (!lastHtml) { log("Generate a game first, or save game.html from the published pane."); return; }
+      const blob = new Blob([lastHtml], { type: "text/html" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "index.html";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+    genBtn.onclick = async () => {
+      const idea = ideaEl.value.trim();
+      const key = keyEl.value.trim();
+      if (!idea) { log("Write a game idea first."); return; }
+      if (!key) { log("Paste your DeepSeek API key to generate in the browser.\nOr click Open Generate Action and run it on GitHub."); return; }
+      if (rememberEl.checked) localStorage.setItem("ds_key", key);
+      else localStorage.removeItem("ds_key");
+      genBtn.disabled = true;
+      try {
+        log("Planning " + idea + " ...");
+        const plan = await chat(key, [{ role: "system", content: ARCHITECT }, { role: "user", content: "USER IDEA (mandatory):\n" + idea }], 2000);
+        log("Writing the single-file game ...");
+        let html = stripFences(await chat(key, [{ role: "system", content: CODEGEN }, { role: "user", content: "USER IDEA (mandatory, do not replace):\n" + idea + "\n\nPlan:\n" + plan }], 8192));
+        if (!html.toLowerCase().includes("<html")) throw new Error("Model did not return HTML.");
+        if (extraEl.checked) {
+          log("Extra review pass ...");
+          html = stripFences(await chat(key, [{ role: "system", content: FIX }, { role: "user", content: "USER IDEA:\n" + idea + "\n\nCurrent file:\n" + html }], 8192));
+        }
+        showGame(html);
+        log("Loaded your generated game in this tab only.\nIdea used: " + idea + "\nThis did not change the public GitHub Pages game. Use Actions to publish.");
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        if (/failed to fetch|cors|networkerror/i.test(msg)) {
+          log("The browser could not call DeepSeek directly (usually CORS).\nUse Actions instead: open Generate Action, type your idea, run workflow.\n\n" + msg);
+        } else {
+          log("Generate failed:\n" + msg);
+        }
+      } finally {
+        genBtn.disabled = false;
       }
-      board[i] = null;
-    }
-  }
-
-  function placeMark(i, player, animate) {
-    if (i < 0 || i > 8) return;
-    if (board[i]) return;
-    board[i] = player;
-    var pos = cellCenter(i);
-    var node = (player === "X") ? createX(pos) : createO(pos);
-    marks[i] = node;
-    if (animate !== false) animateScaleIn(node);
-    else if (node) node.scaling.set(1, 1, 1);
-
-    var col = (player === "X") ? new BABYLON.Color3(0.13, 0.9, 1.0) : new BABYLON.Color3(1.0, 0.24, 0.94);
-    burst(pos.add(new BABYLON.Vector3(0, 0.2, 0)), col);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Flow
-  // ---------------------------------------------------------------------------
-  function toMenu() {
-    state = STATE.MENU;
-    clearTimers();
-    clearBoard();
-    humanTurn = true;
-    aiThinking = false;
-    roundLocked = false;
-    setTurnHUD("");
-    updateScoreHUD();
-    showModal(
-      '<h1>NEON TIC-TAC-TOE</h1>' +
-      '<p>You are <b style="color:#22e6ff">X</b> &nbsp;•&nbsp; AI is <b style="color:#ff3df0">O</b></p>' +
-      '<p class="sub">First to ' + WIN_TARGET + ' wins takes the match.</p>' +
-      '<button class="btn" data-action="start">Start Match</button>'
-    );
-  }
-
-  function startMatch() {
-    scores = { wins: 0, losses: 0, draws: 0 };
-    updateScoreHUD();
-    hideModal();
-    startRound(true);
-  }
-
-  function startRound(humanFirst) {
-    clearTimers();
-    clearBoard();
-    state = STATE.PLAYING;
-    roundLocked = false;
-    aiThinking = false;
-    humanTurn = !!humanFirst;
-    hideModal();
-    updateScoreHUD();
-
-    if (humanTurn) {
-      setTurnHUD("Your turn (X)", "you");
-    } else {
-      setTurnHUD("AI thinking…", "ai");
-      scheduleAI();
-    }
-  }
-
-  function nextRound() {
-    // Alternate who starts each round for fairness
-    var humanFirst = (scores.wins + scores.losses + scores.draws) % 2 === 0;
-    startRound(humanFirst);
-  }
-
-  function clearTimers() {
-    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
-    if (roundEndTimer) { clearTimeout(roundEndTimer); roundEndTimer = null; }
-  }
-
-  function scheduleAI() {
-    if (aiTimer) clearTimeout(aiTimer);
-    aiThinking = true;
-    aiTimer = setTimeout(function () {
-      aiTimer = null;
-      if (state !== STATE.PLAYING) return;
-      if (humanTurn) return;
-      var mv = bestAIMove(board);
-      if (mv >= 0) {
-        placeMark(mv, "O", true);
-      }
-      aiThinking = false;
-      if (state !== STATE.PLAYING) return;
-      humanTurn = true;
-      setTurnHUD("Your turn (X)", "you");
-      checkRoundEnd();
-    }, 420);
-  }
-
-  function checkRoundEnd() {
-    var w = winnerOf(board);
-    if (w) {
-      roundLocked = true;
-      showWinLine(w.line);
-      if (w.player === "X") {
-        scores.wins++;
-        setTurnHUD("You win the round!", "you");
-      } else {
-        scores.losses++;
-        setTurnHUD("AI wins the round.", "ai");
-      }
-      updateScoreHUD();
-      endRound(w.player);
-      return true;
-    }
-    if (isFull(board)) {
-      roundLocked = true;
-      scores.draws++;
-      updateScoreHUD();
-      setTurnHUD("Draw.", "");
-      endRound(null);
-      return true;
-    }
-    return false;
-  }
-
-  function endRound(winner) {
-    state = STATE.ROUND_END;
-    clearTimers();
-    roundEndTimer = setTimeout(function () {
-      roundEndTimer = null;
-      if (scores.wins >= WIN_TARGET) {
-        matchOver(true);
-      } else if (scores.losses >= WIN_TARGET) {
-        matchOver(false);
-      } else {
-        nextRound();
-      }
-    }, 1200);
-  }
-
-  function matchOver(humanWon) {
-    state = STATE.MATCH_OVER;
-    clearTimers();
-    setTurnHUD(humanWon ? "Match won!" : "Match lost.", humanWon ? "you" : "ai");
-    var title = humanWon ? "YOU WIN THE MATCH" : "AI WINS THE MATCH";
-    var color = humanWon ? "#22e6ff" : "#ff3df0";
-    showModal(
-      '<h2 style="color:' + color + '">' + title + '</h2>' +
-      '<p>Final score</p>' +
-      '<p><b style="color:#22e6ff">You ' + scores.wins + '</b> &nbsp;—&nbsp; ' +
-      '<b style="color:#ff3df0">AI ' + scores.losses + '</b> &nbsp;—&nbsp; ' +
-      '<b style="color:#c9d6e6">Draws ' + scores.draws + '</b></p>' +
-      '<button class="btn" data-action="start">Play Again</button>' +
-      '<div style="margin-top:10px"><button class="btn magenta" data-action="menu">Menu</button></div>'
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Human move
-  // ---------------------------------------------------------------------------
-  function tryHumanMove(i) {
-    if (state !== STATE.PLAYING) return;
-    if (!humanTurn) return;
-    if (roundLocked) return;
-    if (i < 0 || i > 8) return;
-    if (board[i]) return;
-
-    placeMark(i, "X", true);
-    humanTurn = false;
-    if (checkRoundEnd()) return;
-    setTurnHUD("AI thinking…", "ai");
-    scheduleAI();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Input: pointer
-  // ---------------------------------------------------------------------------
-  scene.onPointerDown = function (evt, pickInfo) {
-    if (state === STATE.MENU || state === STATE.MATCH_OVER) {
-      // Clicking anywhere on the board area while modal is up does nothing;
-      // modal buttons handle start. But allow quick start on canvas click.
-      return;
-    }
-    if (state !== STATE.PLAYING) return;
-    if (!pickInfo) return;
-    var picked = pickInfo.pickedMesh;
-    if (!picked) return;
-    if (picked.metadata && typeof picked.metadata.cell === "number") {
-      tryHumanMove(picked.metadata.cell);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Input: keyboard
-  // ---------------------------------------------------------------------------
-  window.addEventListener("keydown", function (e) {
-    var k = e.key;
-
-    if (k === "Enter") {
-      if (state === STATE.MENU) { startMatch(); e.preventDefault(); return; }
+    };
+  </script>
+</body>
+</html>
