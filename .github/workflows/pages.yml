@@ -3,9 +3,6 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - "index.html"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -27,8 +24,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Stage Pages payload
         run: |
-          mkdir -p _site
-          cp index.html _site/index.html
+          mkdir -p _site/prompts
+          cp index.html game.html _site/
+          cp prompts/*.md _site/prompts/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       game_idea:
-        description: "Game idea for DeepSeek to implement as a single-file Babylon.js game"
+        description: "Replace this text with YOUR game idea. Whatever you leave here is what gets built."
         required: true
-        default: "Neon hover-craft arena. Collect 10 orbs in 60 seconds. Avoid red sentries. WASD + Shift boost."
+        type: string
+        default: ""
       extra_pass:
         description: "Run one extra DeepSeek review pass after generation"
         required: false
-        default: "false"
+        default: false
         type: boolean
       model:
         description: "DeepSeek model id"
@@ -19,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   generate:
@@ -30,24 +33,42 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
-      - name: Generate index.html
+      - name: Show idea that will be sent
+        run: |
+          echo "IDEA_LENGTH=${#GAME_IDEA}"
+          echo "IDEA<<EOF"
+          echo "$GAME_IDEA"
+          echo "EOF"
+        env:
+          GAME_IDEA: ${{ github.event.inputs.game_idea }}
+
+      - name: Fail if idea is empty
+        env:
+          GAME_IDEA: ${{ github.event.inputs.game_idea }}
+        run: |
+          if [ -z "${GAME_IDEA// /}" ]; then
+            echo "The game idea box was empty. Type the game you want in the Run workflow form."
+            exit 1
+          fi
+
+      - name: Generate game.html
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          DEEPSEEK_MODEL: ${{ inputs.model }}
-          GAME_IDEA: ${{ inputs.game_idea }}
-          EXTRA_PASS: ${{ inputs.extra_pass == true && '1' || '0' }}
+          DEEPSEEK_MODEL: ${{ github.event.inputs.model || 'deepseek-chat' }}
+          GAME_IDEA: ${{ github.event.inputs.game_idea }}
+          EXTRA_PASS: ${{ github.event.inputs.extra_pass == 'true' && '1' || '0' }}
         run: node scripts/generate.mjs
 
       - name: Commit generated game
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html artifacts/plan.md || true
+          git add -f game.html artifacts/plan.md artifacts/last-run.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Generate single-file game from prompt"
+            git commit -m "Generate game.html from prompt"
             git push
           fi
