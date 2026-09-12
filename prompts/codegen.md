@@ -6,9 +6,7 @@ Hard rules:
 - Single file only. Inline <style> and <script>.
 - Babylon.js via CDN:
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  Optionally also:
-  <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-  <script src="https://cdn.babylonjs.com/cannon.js"></script>
+  Optionally also babylon.gui.min.js and cannon.js from the same CDN.
 - 100% client-side. No fetch() to your own paths. No relative asset URLs.
 - Procedural meshes/materials only. Web Audio oscillators only if you need sound.
 - Works when opened as file://, via npx serve, and on GitHub Pages subpaths.
@@ -17,8 +15,5 @@ Hard rules:
 - Initialize BABYLON.Engine against canvas id="renderCanvas".
 - Call engine.runRenderLoop. Handle window resize.
 - Do not use TypeScript. Do not use import/export.
-- Avoid APIs that fail on file:// (no module workers, no COOP/COEP requirements).
-- Keep the code self-contained and robust: guard against missing meshes, never read properties of undefined.
+- Implement the USER IDEA literally. Do not substitute orbs, hover-craft, sentries, or a neon arena unless the idea asks for them.
 - Set window.__GAME_OK__ = true after the engine and scene are created.
-
-Implement the user's game idea using the architecture plan.

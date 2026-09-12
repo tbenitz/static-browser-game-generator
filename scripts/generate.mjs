@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Static Browser Game Generator
- * Calls DeepSeek to produce a single-file Babylon.js game.
+ * Calls DeepSeek to produce a single-file Babylon.js game as game.html.
  * API key is read from DEEPSEEK_API_KEY — never commit that value.
  */
 import fs from "node:fs";
@@ -20,9 +20,23 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-const idea = process.argv.slice(2).join(" ").trim() || process.env.GAME_IDEA ||
-  "A neon hover-craft arena. Collect 10 glowing orbs before the timer hits zero. Avoid red sentry spheres.";
+function cleanIdea(raw) {
+  return String(raw || "").replace(/^\uFEFF/, "").trim();
+}
+
+const argvIdea = process.argv.filter((a) => a !== "--extra-pass").slice(2).join(" ").trim();
+const idea = cleanIdea(argvIdea || process.env.GAME_IDEA);
+
+if (!idea) {
+  console.error("Missing GAME_IDEA. Pass it as an argument or set the GAME_IDEA env var.");
+  process.exit(1);
+}
+
 const extraPass = process.env.EXTRA_PASS === "1" || process.argv.includes("--extra-pass");
+
+console.log("Using idea:", idea);
+console.log("Model:", MODEL);
+console.log("Extra pass:", extraPass ? "yes" : "no");
 
 function readPrompt(name) {
   return fs.readFileSync(path.join(root, "prompts", name), "utf8");
@@ -51,7 +65,7 @@ async function chat(messages, maxTokens) {
     body: JSON.stringify({
       model: MODEL,
       messages,
-      temperature: 0.4,
+      temperature: 0.35,
       max_tokens: maxTokens,
       stream: false
     })
@@ -70,15 +84,23 @@ async function main() {
   console.log("Phase 1: planning");
   const plan = await chat([
     { role: "system", content: readPrompt("architect.md") },
-    { role: "user", content: `Game idea:\n${idea}` }
+    { role: "user", content: `USER IDEA (mandatory, do not replace with a different game):\n${idea}` }
   ], 2000);
-  fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
-  fs.writeFileSync(path.join(root, "artifacts", "plan.md"), plan);
+
+  const art = path.join(root, "artifacts");
+  fs.mkdirSync(art, { recursive: true });
+  fs.writeFileSync(path.join(art, "plan.md"), plan);
+  fs.writeFileSync(path.join(art, "last-run.json"), JSON.stringify({
+    idea,
+    model: MODEL,
+    extraPass,
+    createdAt: new Date().toISOString()
+  }, null, 2));
 
   console.log("Phase 2: full code generation");
   let html = stripFences(await chat([
     { role: "system", content: readPrompt("codegen.md") },
-    { role: "user", content: `Architecture plan:\n${plan}\n\nGame idea:\n${idea}` }
+    { role: "user", content: `USER IDEA (mandatory, implement this exact game, not a neon hover-craft unless that is the idea):\n${idea}\n\nArchitecture plan:\n${plan}` }
   ], 8192));
 
   if (!html.toLowerCase().includes("<html")) {
@@ -89,11 +111,11 @@ async function main() {
     console.log("Optional pass: review and tighten the single file");
     html = stripFences(await chat([
       { role: "system", content: readPrompt("fix.md") },
-      { role: "user", content: "Run 1 additional deep error check and optimization pass. Keep the same game. Fix syntax issues, missing engine init, and file:// breakage.\n\nCurrent file:\n" + html }
+      { role: "user", content: `USER IDEA:\n${idea}\n\nRun 1 additional deep error check and optimization pass. Keep THIS idea. Do not swap in orbs/hover-craft.\n\nCurrent file:\n${html}` }
     ], 8192));
   }
 
-  const out = path.join(root, "index.html");
+  const out = path.join(root, "game.html");
   fs.writeFileSync(out, html.endsWith("\n") ? html : html + "\n");
   console.log("Wrote", out);
 }
