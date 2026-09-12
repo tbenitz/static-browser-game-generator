@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orb Drift</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#05060a;font-family:system-ui,sans-serif}
+#renderCanvas{width:100%;height:100%;display:block;touch-action:none}
+#ui{position:absolute;inset:0;pointer-events:none;color:#e8f0ff}
+#hud{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;text-shadow:0 2px 10px #000;font-size:18px}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72);pointer-events:auto}
+.panel{width:min(520px,90vw);padding:28px;border:1px solid #8cbfff40;background:#080c18d1;border-radius:16px}
+button{border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:#7ee0ff;cursor:pointer}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="renderCanvas"></canvas>
+<div id="ui">
+  <div id="hud"><div>SCORE <b id="score">0</b></div><div>TIME <b id="time">60</b></div><div>ORBS <b id="orbs">0</b></div></div>
+  <div id="overlay"><div class="panel">
+    <h1>ORB DRIFT</h1>
+    <p>WASD or arrows to fly. Shift boosts. Collect orbs, avoid red sentries.</p>
+    <button id="startBtn" type="button">START</button>
+  </div></div>
+</div>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+(function(){
+  const canvas=document.getElementById('renderCanvas');
+  const engine=new BABYLON.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true});
+  const scene=new BABYLON.Scene(engine);
+  scene.clearColor=new BABYLON.Color4(0.02,0.03,0.06,1);
+  const camera=new BABYLON.FollowCamera('cam',new BABYLON.Vector3(0,12,-18),scene);
+  camera.radius=16;camera.heightOffset=7;camera.rotationOffset=180;camera.cameraAcceleration=0.05;camera.attachControl(canvas,true);
+  new BABYLON.HemisphericLight('h',new BABYLON.Vector3(0.2,1,0.3),scene).intensity=0.7;
+  const glow=new BABYLON.GlowLayer('g',scene);glow.intensity=0.7;
+  const ground=BABYLON.MeshBuilder.CreateGround('ground',{width:80,height:80},scene);
+  const gm=new BABYLON.StandardMaterial('gm',scene);gm.diffuseColor=new BABYLON.Color3(0.05,0.08,0.14);ground.material=gm;
+  const player=BABYLON.MeshBuilder.CreateBox('craft',{width:1.6,height:0.5,depth:2.4},scene);
+  player.position.set(0,0.6,0);
+  const pm=new BABYLON.StandardMaterial('pm',scene);pm.diffuseColor=new BABYLON.Color3(0.15,0.7,0.95);pm.emissiveColor=new BABYLON.Color3(0.05,0.25,0.4);player.material=pm;
+  camera.lockedTarget=player;
+  const keys=Object.create(null);
+  addEventListener('keydown',e=>keys[e.code]=true);
+  addEventListener('keyup',e=>keys[e.code]=false);
+  let state='menu',score=0,timeLeft=60,yaw=0,orbs=[],sentries=[],vel=new BABYLON.Vector3(),acc=0;
+  const scoreEl=document.getElementById('score'),timeEl=document.getElementById('time'),orbsEl=document.getElementById('orbs');
+  const overlay=document.getElementById('overlay'),startBtn=document.getElementById('startBtn');
+  function rand(a,b){return a+Math.random()*(b-a)}
+  function clear(list){list.forEach(m=>m.dispose());list.length=0}
+  function spawn(){
+    clear(orbs);clear(sentries);
+    for(let i=0;i<10;i++){
+      const o=BABYLON.MeshBuilder.CreateSphere('o'+i,{diameter:1.1},scene);
+      o.position.set(rand(-32,32),1.1,rand(-32,32));
+      const m=new BABYLON.StandardMaterial('om'+i,scene);m.emissiveColor=new BABYLON.Color3(0.3,0.9,0.5);o.material=m;orbs.push(o);
+    }
+    for(let i=0;i<4;i++){
+      const s=BABYLON.MeshBuilder.CreateSphere('s'+i,{diameter:1.6},scene);
+      s.position.set(rand(-30,30),1,rand(-30,30));
+      const m=new BABYLON.StandardMaterial('sm'+i,scene);m.emissiveColor=new BABYLON.Color3(0.95,0.15,0.25);s.material=m;
+      s.metadata={angle:Math.random()*6.28,speed:4+Math.random()*4};sentries.push(s);
+    }
+    orbsEl.textContent=String(orbs.length);
+  }
+  function end(won){state='over';overlay.classList.remove('hidden');startBtn.textContent='PLAY AGAIN';overlay.querySelector('h1').textContent=won?'CLEAN SWEEP':'SIGNAL LOST';}
+  startBtn.onclick=()=>{score=0;timeLeft=60;yaw=0;vel.set(0,0,0);player.position.set(0,0.6,0);spawn();scoreEl.textContent='0';timeEl.textContent='60';state='play';overlay.classList.add('hidden');};
+  scene.onBeforeRenderObservable.add(()=>{
+    const dt=Math.min(engine.getDeltaTime()/1000,0.05); if(state!=='play') return;
+    acc+=dt; if(acc>=1){acc-=1;timeLeft--;timeEl.textContent=String(Math.max(0,timeLeft)); if(timeLeft<=0) end(false);}
+    const forward=(keys.KeyW||keys.ArrowUp)?1:(keys.KeyS||keys.ArrowDown)?-1:0;
+    const turn=(keys.KeyA||keys.ArrowLeft)?1:(keys.KeyD||keys.ArrowRight)?-1:0;
+    const boost=(keys.ShiftLeft||keys.ShiftRight)?1.8:1;
+    yaw+=turn*2.4*dt; player.rotation.y=yaw;
+    const dir=new BABYLON.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+    vel=vel.scale(0.9).add(dir.scale(forward*28*boost*dt));
+    player.position.addInPlace(vel.scale(dt));
+    player.position.x=Math.max(-38,Math.min(38,player.position.x));
+    player.position.z=Math.max(-38,Math.min(38,player.position.z));
+    for(let i=orbs.length-1;i>=0;i--){
+      const o=orbs[i]; o.rotation.y+=dt*2;
+      if(BABYLON.Vector3.Distance(player.position,o.position)<1.7){o.dispose();orbs.splice(i,1);score+=100;scoreEl.textContent=String(score);orbsEl.textContent=String(orbs.length); if(!orbs.length) end(true);}
+    }
+    sentries.forEach((s,i)=>{
+      s.metadata.angle+=dt*0.6;
+      s.position.x+=Math.cos(s.metadata.angle)*s.metadata.speed*dt;
+      s.position.z+=Math.sin(s.metadata.angle+i)*s.metadata.speed*dt;
+      s.position.x=Math.max(-36,Math.min(36,s.position.x));
+      s.position.z=Math.max(-36,Math.min(36,s.position.z));
+      if(BABYLON.Vector3.Distance(player.position,s.position)<1.8) end(false);
+    });
+  });
+  engine.runRenderLoop(()=>scene.render());
+  addEventListener('resize',()=>engine.resize());
+  window.__GAME_OK__=true;
+})();
+</script>
+</body>
+</html>
