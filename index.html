@@ -1,843 +1,843 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Balloon Hunt 3D</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      user-select: none;
-    }
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: 'Segoe UI', 'Arial', sans-serif;
-    }
-    #renderCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      outline: none;
-      touch-action: none;
-    }
-    #hud {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 10;
-    }
-    .hud-text {
-      position: absolute;
-      color: #fff;
-      font-size: 22px;
-      font-weight: 700;
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.8), 0 0 12px rgba(0,0,0,0.5);
-      letter-spacing: 1px;
-    }
-    #scoreDisplay {
-      top: 18px;
-      left: 24px;
-    }
-    #ammoDisplay {
-      top: 18px;
-      right: 24px;
-      text-align: right;
-    }
-    #waveDisplay {
-      top: 52px;
-      right: 24px;
-      text-align: right;
-      font-size: 18px;
-      opacity: 0.9;
-    }
-    #comboDisplay {
-      top: 52px;
-      left: 24px;
-      font-size: 18px;
-      color: #ffdd44;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    #comboDisplay.visible {
-      opacity: 1;
-    }
-    #crosshair {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 32px;
-      height: 32px;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-    #crosshair::before,
-    #crosshair::after {
-      content: '';
-      position: absolute;
-      background: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 0 4px rgba(0,0,0,0.8);
-    }
-    #crosshair::before {
-      top: 50%;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      transform: translateY(-50%);
-    }
-    #crosshair::after {
-      left: 50%;
-      top: 0;
-      height: 100%;
-      width: 2px;
-      transform: translateX(-50%);
-    }
-    #crosshair .dot {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 4px;
-      height: 4px;
-      background: #ff3333;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 6px rgba(255,50,50,0.9);
-    }
-    .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.65);
-      color: #fff;
-      text-align: center;
-      pointer-events: auto;
-      z-index: 20;
-      transition: opacity 0.3s;
-    }
-    .overlay.hidden {
-      display: none;
-    }
-    .overlay h1 {
-      font-size: 52px;
-      margin-bottom: 12px;
-      text-shadow: 3px 3px 12px rgba(0,0,0,0.9), 0 0 30px rgba(255,200,50,0.4);
-      letter-spacing: 3px;
-    }
-    .overlay h2 {
-      font-size: 36px;
-      margin-bottom: 16px;
-      text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
-    }
-    .overlay p {
-      font-size: 18px;
-      margin-bottom: 8px;
-      opacity: 0.9;
-      line-height: 1.5;
-    }
-    .overlay .big-score {
-      font-size: 42px;
-      font-weight: 800;
-      color: #ffdd44;
-      margin: 16px 0;
-      text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
-    }
-    .btn {
-      margin-top: 24px;
-      padding: 14px 48px;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: #1a1a2e;
-      background: linear-gradient(180deg, #ffe066, #ffb300);
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(255,180,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
-      transition: transform 0.1s, box-shadow 0.1s;
-      pointer-events: auto;
-    }
-    .btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 6px 24px rgba(255,180,0,0.7), inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-    .btn:active {
-      transform: scale(0.97);
-    }
-    #waveBanner {
-      position: absolute;
-      top: 35%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 48px;
-      font-weight: 800;
-      color: #fff;
-      text-shadow: 3px 3px 16px rgba(0,0,0,0.9), 0 0 40px rgba(100,200,255,0.6);
-      letter-spacing: 4px;
-      opacity: 0;
-      transition: opacity 0.4s;
-      pointer-events: none;
-      z-index: 15;
-      text-align: center;
-    }
-    #waveBanner.show {
-      opacity: 1;
-    }
-    #pauseOverlay .overlay-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .controls-hint {
-      margin-top: 20px;
-      font-size: 15px;
-      opacity: 0.7;
-      line-height: 1.8;
-    }
-    .controls-hint kbd {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 4px;
-      padding: 2px 8px;
-      font-family: monospace;
-      font-size: 14px;
-    }
-    #loadingOverlay {
-      background: #0a0a1a;
-    }
-    #loadingOverlay .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid rgba(255,255,255,0.15);
-      border-top-color: #ffb300;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Neon Tic-Tac-Toe — Human vs AI</title>
+<style>
+  :root{
+    --cyan:#22e6ff;
+    --magenta:#ff3df0;
+    --bg:#05060c;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:radial-gradient(circle at 50% 40%, #0b1024 0%, #05060c 70%);
+    overflow:hidden;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, monospace;
+    color:#e8f6ff;
+    -webkit-user-select:none; user-select:none;
+    touch-action:none;
+  }
+  #renderCanvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+    outline:none;
+    touch-action:none;
+  }
+  #hud{
+    position:absolute; inset:0;
+    pointer-events:none;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start;
+    padding:14px;
+  }
+  #topbar{
+    width:100%; max-width:760px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    text-shadow:0 0 10px rgba(34,230,255,.55);
+  }
+  #score{
+    font-size:clamp(14px,2.4vw,20px);
+    letter-spacing:1px;
+    font-weight:700;
+    background:rgba(6,12,26,.55);
+    border:1px solid rgba(34,230,255,.35);
+    border-radius:999px;
+    padding:6px 16px;
+    backdrop-filter:blur(4px);
+  }
+  #score .you{ color:var(--cyan); }
+  #score .ai{ color:var(--magenta); }
+  #score .draw{ color:#c9d6e6; }
+  #turn{
+    font-size:clamp(12px,2vw,16px);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    opacity:.9;
+    min-height:1.2em;
+  }
+  #turn.you{ color:var(--cyan); text-shadow:0 0 12px rgba(34,230,255,.8); }
+  #turn.ai{ color:var(--magenta); text-shadow:0 0 12px rgba(255,61,240,.8); }
+  #hint{
+    position:absolute; bottom:10px; left:0; right:0;
+    text-align:center; font-size:12px; opacity:.45; letter-spacing:1px;
+  }
+  #modalWrap{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .25s ease;
+  }
+  #modalWrap.show{ opacity:1; pointer-events:auto; }
+  #modal{
+    pointer-events:auto;
+    min-width:min(88vw,420px);
+    max-width:min(92vw,520px);
+    padding:26px 26px 22px;
+    border-radius:18px;
+    text-align:center;
+    background:linear-gradient(160deg, rgba(10,18,38,.92), rgba(6,8,18,.94));
+    border:1px solid rgba(34,230,255,.35);
+    box-shadow:0 0 40px rgba(34,230,255,.18), inset 0 0 40px rgba(255,61,240,.06);
+    backdrop-filter:blur(6px);
+  }
+  #modal h1{
+    margin:0 0 6px;
+    font-size:clamp(24px,5vw,40px);
+    letter-spacing:3px;
+    background:linear-gradient(90deg,var(--cyan),var(--magenta));
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+    filter:drop-shadow(0 0 14px rgba(34,230,255,.35));
+  }
+  #modal h2{
+    margin:0 0 10px;
+    font-size:clamp(18px,4vw,28px);
+    letter-spacing:2px;
+  }
+  #modal p{
+    margin:8px 0;
+    font-size:clamp(13px,2.2vw,16px);
+    line-height:1.5;
+    opacity:.9;
+  }
+  #modal .sub{ opacity:.6; font-size:12px; letter-spacing:1px; }
+  .btn{
+    display:inline-block;
+    margin-top:16px;
+    padding:12px 26px;
+    border-radius:999px;
+    border:1px solid rgba(34,230,255,.6);
+    background:rgba(34,230,255,.08);
+    color:#eafcff;
+    font-size:clamp(13px,2.2vw,16px);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
+    box-shadow:0 0 18px rgba(34,230,255,.18);
+  }
+  .btn:hover{ background:rgba(34,230,255,.2); box-shadow:0 0 26px rgba(34,230,255,.4); }
+  .btn:active{ transform:scale(.96); }
+  .btn.magenta{
+    border-color:rgba(255,61,240,.6);
+    background:rgba(255,61,240,.08);
+    box-shadow:0 0 18px rgba(255,61,240,.18);
+  }
+  .btn.magenta:hover{ background:rgba(255,61,240,.2); box-shadow:0 0 26px rgba(255,61,240,.4); }
+  #fatal{
+    position:absolute; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:#05060c; color:#ff8080; font-size:16px; text-align:center; padding:20px;
+    z-index:50;
+  }
+</style>
 </head>
 <body>
-  <canvas id="renderCanvas"></canvas>
+<canvas id="renderCanvas" touch-action="none"></canvas>
 
-  <div id="hud">
-    <div id="scoreDisplay" class="hud-text">Score: 0</div>
-    <div id="ammoDisplay" class="hud-text">Ammo: 6/6</div>
-    <div id="waveDisplay" class="hud-text">Wave 1/3</div>
-    <div id="comboDisplay" class="hud-text">Combo x2</div>
-    <div id="crosshair"><div class="dot"></div></div>
-    <div id="waveBanner"></div>
-  </div>
-
-  <div id="menuOverlay" class="overlay">
-    <h1>🎈 BALLOON HUNT 3D</h1>
-    <p>Shoot the balloons before they escape!</p>
-    <p>Clear 3 waves to win. Don't let them get away.</p>
-    <div class="controls-hint">
-      <kbd>Mouse</kbd> Aim &nbsp; <kbd>Click</kbd> / <kbd>Space</kbd> Shoot &nbsp; <kbd>R</kbd> Reload &nbsp; <kbd>Esc</kbd> Pause
+<div id="hud">
+  <div id="topbar">
+    <div id="score">
+      <span class="you">You 0</span> &nbsp;—&nbsp; <span class="ai">AI 0</span> &nbsp;—&nbsp; <span class="draw">Draws 0</span>
     </div>
-    <button class="btn" id="startBtn">START</button>
+    <div id="turn"></div>
   </div>
+  <div id="hint">Click a cell or press 1–9 &nbsp;•&nbsp; Enter = start / restart &nbsp;•&nbsp; Esc = menu</div>
+</div>
 
-  <div id="pauseOverlay" class="overlay hidden">
-    <div class="overlay-content">
-      <h2>PAUSED</h2>
-      <p>Press <kbd>Esc</kbd> to resume</p>
-      <button class="btn" id="resumeBtn">RESUME</button>
-    </div>
+<div id="modalWrap" class="show">
+  <div id="modal">
+    <h1>NEON TIC-TAC-TOE</h1>
+    <p>You are <b style="color:#22e6ff">X</b> &nbsp;•&nbsp; AI is <b style="color:#ff3df0">O</b></p>
+    <p class="sub">First to 5 wins takes the match.</p>
+    <button class="btn" id="startBtn">Start Match</button>
   </div>
+</div>
 
-  <div id="gameoverOverlay" class="overlay hidden">
-    <h2>GAME OVER</h2>
-    <p id="gameoverReason">A balloon escaped!</p>
-    <div class="big-score" id="gameoverScore">Score: 0</div>
-    <button class="btn" id="retryBtn">TRY AGAIN</button>
-  </div>
+<div id="fatal">Failed to initialize the 3D engine. Please check your connection / browser support.</div>
 
-  <div id="victoryOverlay" class="overlay hidden">
-    <h2>🏆 VICTORY!</h2>
-    <p>You cleared all 3 waves!</p>
-    <div class="big-score" id="victoryScore">Score: 0</div>
-    <button class="btn" id="playAgainBtn">PLAY AGAIN</button>
-  </div>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+(function () {
+  "use strict";
 
-  <div id="loadingOverlay" class="overlay">
-    <div class="spinner"></div>
-    <p>Loading Babylon.js...</p>
-  </div>
+  // ---------------------------------------------------------------------------
+  // Boot safety
+  // ---------------------------------------------------------------------------
+  var fatalEl = document.getElementById("fatal");
+  function fatal(msg) {
+    if (fatalEl) {
+      fatalEl.style.display = "flex";
+      fatalEl.textContent = msg || "Failed to initialize.";
+    }
+  }
 
-  <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script>
-    (function() {
-      'use strict';
+  if (typeof BABYLON === "undefined") {
+    fatal("Babylon.js failed to load. Check your network connection.");
+    return;
+  }
 
-      // ============================================================
-      // GAME CONSTANTS
-      // ============================================================
-      var WAVE_COUNTS = [8, 12, 16];
-      var MAX_AMMO = 6;
-      var RELOAD_TIME = 1.2; // seconds
-      var ESCAPE_Z = -55;    // balloons escape past this Z (they fly away from camera)
-      var ESCAPE_Y = 40;     // or above this height
-      var SPAWN_Z_MIN = -18;
-      var SPAWN_Z_MAX = -8;
-      var SPAWN_X_RANGE = 14;
-      var SPAWN_Y = -2;
-      var BALLOON_BASE_SPEED = 3.2;
-      var BALLOON_SPEED_PER_WAVE = 0.7;
-      var SMALL_BALLOON_CHANCE = 0.25;
-      var COMBO_TIMEOUT = 2.5; // seconds to keep combo
+  var canvas = document.getElementById("renderCanvas");
+  if (!canvas) { fatal("Canvas element missing."); return; }
 
-      // ============================================================
-      // DOM REFS
-      // ============================================================
-      var canvas = document.getElementById('renderCanvas');
-      var scoreDisplay = document.getElementById('scoreDisplay');
-      var ammoDisplay = document.getElementById('ammoDisplay');
-      var waveDisplay = document.getElementById('waveDisplay');
-      var comboDisplay = document.getElementById('comboDisplay');
-      var waveBanner = document.getElementById('waveBanner');
-      var menuOverlay = document.getElementById('menuOverlay');
-      var pauseOverlay = document.getElementById('pauseOverlay');
-      var gameoverOverlay = document.getElementById('gameoverOverlay');
-      var victoryOverlay = document.getElementById('victoryOverlay');
-      var loadingOverlay = document.getElementById('loadingOverlay');
-      var gameoverReason = document.getElementById('gameoverReason');
-      var gameoverScore = document.getElementById('gameoverScore');
-      var victoryScore = document.getElementById('victoryScore');
+  // ---------------------------------------------------------------------------
+  // Engine + Scene
+  // ---------------------------------------------------------------------------
+  var engine, scene;
+  try {
+    engine = new BABYLON.Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true,
+      antialias: true
+    }, true);
+  } catch (e) {
+    fatal("WebGL not available: " + (e && e.message ? e.message : e));
+    return;
+  }
 
-      // ============================================================
-      // GAME STATE
-      // ============================================================
-      var STATE = {
-        BOOT: 'BOOT',
-        MENU: 'MENU',
-        PLAYING: 'PLAYING',
-        PAUSED: 'PAUSED',
-        WAVE_CLEAR: 'WAVE_CLEAR',
-        GAME_OVER: 'GAME_OVER',
-        VICTORY: 'VICTORY'
-      };
+  scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.02, 0.024, 0.05, 1.0);
 
-      var game = {
-        state: STATE.BOOT,
-        score: 0,
-        ammo: MAX_AMMO,
-        wave: 0,
-        balloonsSpawned: 0,
-        balloonsPopped: 0,
-        balloonsEscaped: 0,
-        balloonsAlive: 0,
-        combo: 0,
-        comboTimer: 0,
-        reloading: false,
-        reloadTimer: 0,
-        spawnTimer: 0,
-        spawnInterval: 1.0,
-        waveClearTimer: 0,
-        totalBalloonsInWave: 0
-      };
+  // ---------------------------------------------------------------------------
+  // Camera + Lights
+  // ---------------------------------------------------------------------------
+  var camera = new BABYLON.ArcRotateCamera(
+    "cam",
+    -Math.PI / 2,
+    Math.PI / 2.6,
+    11.5,
+    new BABYLON.Vector3(0, 0, 0),
+    scene
+  );
+  camera.attachControl(canvas, true);
+  camera.lowerRadiusLimit = 9.0;
+  camera.upperRadiusLimit = 15.0;
+  camera.lowerBetaLimit = Math.PI / 3.6;
+  camera.upperBetaLimit = Math.PI / 2.05;
+  camera.lowerAlphaLimit = -Math.PI / 2 - 0.55;
+  camera.upperAlphaLimit = -Math.PI / 2 + 0.55;
+  camera.wheelPrecision = 40;
+  camera.panningSensibility = 0;
+  camera.useBouncingBehavior = false;
+  camera.inertia = 0.85;
 
-      // ============================================================
-      // BABYLON SETUP
-      // ============================================================
-      var engine = null;
-      var scene = null;
-      var camera = null;
-      var balloons = [];
-      var particleSystems = [];
-      var ground = null;
-      var skybox = null;
-      var launcherGroup = null;
-      var crosshairMesh = null;
+  var hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+  hemi.intensity = 0.55;
+  hemi.diffuse = new BABYLON.Color3(0.55, 0.7, 1.0);
+  hemi.groundColor = new BABYLON.Color3(0.05, 0.05, 0.12);
 
-      // Camera aim
-      var aimYaw = 0;
-      var aimPitch = 0;
-      var targetYaw = 0;
-      var targetPitch = 0;
-      var MAX_YAW = 0.7;
-      var MAX_PITCH_UP = 0.55;
-      var MAX_PITCH_DOWN = 0.35;
+  var point = new BABYLON.PointLight("pt", new BABYLON.Vector3(0, 4.5, -3.5), scene);
+  point.intensity = 0.9;
+  point.diffuse = new BABYLON.Color3(0.4, 0.85, 1.0);
 
-      // Audio
-      var audioCtx = null;
+  var point2 = new BABYLON.PointLight("pt2", new BABYLON.Vector3(3.5, -2.5, 3.0), scene);
+  point2.intensity = 0.7;
+  point2.diffuse = new BABYLON.Color3(1.0, 0.35, 0.95);
 
-      function initAudio() {
-        if (audioCtx) return;
-        try {
-          var AC = window.AudioContext || window.webkitAudioContext;
-          if (AC) audioCtx = new AC();
-        } catch (e) {
-          audioCtx = null;
+  var glow = new BABYLON.GlowLayer("glow", scene);
+  glow.intensity = 1.1;
+
+  // ---------------------------------------------------------------------------
+  // Materials
+  // ---------------------------------------------------------------------------
+  function makeMat(name, color, emissive) {
+    var m = new BABYLON.StandardMaterial(name, scene);
+    m.diffuseColor = color;
+    m.emissiveColor = emissive || color.scale(0.35);
+    m.specularColor = new BABYLON.Color3(0.35, 0.35, 0.4);
+    return m;
+  }
+
+  var matBoard = new BABYLON.StandardMaterial("matBoard", scene);
+  matBoard.diffuseColor = new BABYLON.Color3(0.05, 0.07, 0.13);
+  matBoard.emissiveColor = new BABYLON.Color3(0.01, 0.02, 0.05);
+  matBoard.specularColor = new BABYLON.Color3(0.15, 0.2, 0.3);
+
+  var matGrid = makeMat("matGrid", new BABYLON.Color3(0.13, 0.9, 1.0), new BABYLON.Color3(0.13, 0.9, 1.0));
+  var matX = makeMat("matX", new BABYLON.Color3(0.13, 0.9, 1.0), new BABYLON.Color3(0.13, 0.9, 1.0));
+  var matO = makeMat("matO", new BABYLON.Color3(1.0, 0.24, 0.94), new BABYLON.Color3(1.0, 0.24, 0.94));
+  var matWin = makeMat("matWin", new BABYLON.Color3(1.0, 0.95, 0.4), new BABYLON.Color3(1.0, 0.95, 0.4));
+
+  // ---------------------------------------------------------------------------
+  // Board geometry
+  // ---------------------------------------------------------------------------
+  var CELL = 2.0;      // cell size
+  var GAP = 0.12;      // half thickness of grid lines
+  var BOARD_Y = 0;
+
+  var boardRoot = new BABYLON.TransformNode("boardRoot", scene);
+
+  var slab = BABYLON.MeshBuilder.CreateBox("slab", {
+    width: CELL * 3 + 0.9,
+    height: 0.35,
+    depth: CELL * 3 + 0.9
+  }, scene);
+  slab.material = matBoard;
+  slab.position.y = BOARD_Y - 0.22;
+  slab.parent = boardRoot;
+
+  // Grid lines: 2 vertical + 2 horizontal thin boxes on top of slab
+  var lineThickness = GAP * 2;
+  var lineLen = CELL * 3 + 0.5;
+  var lineY = BOARD_Y + 0.005;
+
+  function addLine(name, x, z, w, d) {
+    var l = BABYLON.MeshBuilder.CreateBox(name, { width: w, height: 0.06, depth: d }, scene);
+    l.material = matGrid;
+    l.position.set(x, lineY, z);
+    l.parent = boardRoot;
+    return l;
+  }
+  addLine("v1", -CELL / 2, 0, lineThickness, lineLen);
+  addLine("v2", CELL / 2, 0, lineThickness, lineLen);
+  addLine("h1", 0, -CELL / 2, lineLen, lineThickness);
+  addLine("h2", 0, CELL / 2, lineLen, lineThickness);
+
+  // ---------------------------------------------------------------------------
+  // Cells (pick planes) + marks
+  // ---------------------------------------------------------------------------
+  // index 0..8, row-major: 0 1 2 / 3 4 5 / 6 7 8
+  function cellCenter(i) {
+    var col = i % 3;
+    var row = Math.floor(i / 3);
+    return new BABYLON.Vector3(
+      (col - 1) * CELL,
+      BOARD_Y + 0.02,
+      (row - 1) * CELL
+    );
+  }
+
+  var pickPlanes = [];
+  var marks = [];       // marks[i] = mesh or null
+  var board = [];       // board[i] = "X" | "O" | null
+
+  for (var i = 0; i < 9; i++) {
+    board[i] = null;
+    marks[i] = null;
+
+    var p = BABYLON.MeshBuilder.CreatePlane("pick" + i, { size: CELL * 0.94 }, scene);
+    p.rotation.x = Math.PI / 2;
+    p.position = cellCenter(i);
+    p.isPickable = true;
+    p.visibility = 0;              // invisible but pickable
+    p.metadata = { cell: i };
+    p.parent = boardRoot;
+    pickPlanes.push(p);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Particle burst (procedural, no texture)
+  // ---------------------------------------------------------------------------
+  function makeSparkTexture() {
+    // 16x16 radial gradient via canvas -> data URL (no external asset)
+    var c = document.createElement("canvas");
+    c.width = 32; c.height = 32;
+    var ctx = c.getContext("2d");
+    var g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.35, "rgba(255,255,255,0.7)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 32, 32);
+    return c.toDataURL();
+  }
+  var sparkTex = makeSparkTexture();
+
+  function burst(pos, color) {
+    try {
+      var ps = new BABYLON.ParticleSystem("burst", 60, scene);
+      ps.particleTexture = new BABYLON.Texture(sparkTex, scene);
+      ps.emitter = pos.clone();
+      ps.minEmitBox = new BABYLON.Vector3(-0.1, -0.1, -0.1);
+      ps.maxEmitBox = new BABYLON.Vector3(0.1, 0.1, 0.1);
+      ps.color1 = new BABYLON.Color4(color.r, color.g, color.b, 1.0);
+      ps.color2 = new BABYLON.Color4(color.r * 0.6, color.g * 0.6, color.b * 0.6, 1.0);
+      ps.colorDead = new BABYLON.Color4(color.r, color.g, color.b, 0.0);
+      ps.minSize = 0.06;
+      ps.maxSize = 0.2;
+      ps.minLifeTime = 0.25;
+      ps.maxLifeTime = 0.6;
+      ps.emitRate = 900;
+      ps.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+      ps.gravity = new BABYLON.Vector3(0, -3.0, 0);
+      ps.direction1 = new BABYLON.Vector3(-2, 2, -2);
+      ps.direction2 = new BABYLON.Vector3(2, 5, 2);
+      ps.minAngularSpeed = 0;
+      ps.maxAngularSpeed = Math.PI;
+      ps.minEmitPower = 1;
+      ps.maxEmitPower = 3;
+      ps.updateSpeed = 0.01;
+      ps.targetStopDuration = 0.12;
+      ps.disposeOnStop = true;
+      ps.start();
+      setTimeout(function () {
+        try { ps.stop(); } catch (e) {}
+      }, 140);
+    } catch (e) { /* particles are cosmetic */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mark creation
+  // ---------------------------------------------------------------------------
+  function createX(pos) {
+    var root = new BABYLON.TransformNode("X", scene);
+    root.position = pos.clone();
+    root.parent = boardRoot;
+
+    var len = CELL * 0.62;
+    var th = 0.16;
+    var bar1 = BABYLON.MeshBuilder.CreateBox("xbar1", { width: len, height: 0.14, depth: th }, scene);
+    bar1.material = matX;
+    bar1.rotation.y = Math.PI / 4;
+    bar1.position.y = 0.12;
+    bar1.parent = root;
+
+    var bar2 = BABYLON.MeshBuilder.CreateBox("xbar2", { width: len, height: 0.14, depth: th }, scene);
+    bar2.material = matX;
+    bar2.rotation.y = -Math.PI / 4;
+    bar2.position.y = 0.12;
+    bar2.parent = root;
+
+    root.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
+    return root;
+  }
+
+  function createO(pos) {
+    var root = new BABYLON.TransformNode("O", scene);
+    root.position = pos.clone();
+    root.parent = boardRoot;
+
+    var torus = BABYLON.MeshBuilder.CreateTorus("otorus", {
+      diameter: CELL * 0.66,
+      thickness: 0.17,
+      tessellation: 40
+    }, scene);
+    torus.material = matO;
+    torus.position.y = 0.12;
+    torus.parent = root;
+
+    root.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
+    return root;
+  }
+
+  function animateScaleIn(node) {
+    if (!node) return;
+    var from = 0.01;
+    var to = 1.0;
+    var t = 0;
+    var dur = 0.28;
+    var obs = scene.onBeforeRenderObservable.add(function () {
+      if (!node || node.isDisposed()) {
+        scene.onBeforeRenderObservable.remove(obs);
+        return;
+      }
+      t += engine.getDeltaTime() / 1000;
+      var k = Math.min(1, t / dur);
+      // ease out back
+      var s = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
+      var v = from + (to - from) * (k < 1 ? s : 1);
+      node.scaling.set(v, v, v);
+      if (k >= 1) {
+        node.scaling.set(1, 1, 1);
+        scene.onBeforeRenderObservable.remove(obs);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Win detection
+  // ---------------------------------------------------------------------------
+  var LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function winnerOf(b) {
+    for (var i = 0; i < LINES.length; i++) {
+      var L = LINES[i];
+      var a = b[L[0]], c = b[L[1]], d = b[L[2]];
+      if (a && a === c && a === d) {
+        return { player: a, line: L };
+      }
+    }
+    return null;
+  }
+
+  function isFull(b) {
+    for (var i = 0; i < 9; i++) if (!b[i]) return false;
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Minimax AI
+  // ---------------------------------------------------------------------------
+  function minimax(b, turn, depth) {
+    var w = winnerOf(b);
+    if (w) {
+      if (w.player === "O") return 10 - depth;
+      if (w.player === "X") return -10 + depth;
+    }
+    if (isFull(b)) return 0;
+
+    var best;
+    if (turn === "O") {
+      best = -Infinity;
+      for (var i = 0; i < 9; i++) {
+        if (!b[i]) {
+          b[i] = "O";
+          var s = minimax(b, "X", depth + 1);
+          b[i] = null;
+          if (s > best) best = s;
         }
       }
-
-      function playSound(type) {
-        if (!audioCtx) return;
-        try {
-          if (audioCtx.state === 'suspended') audioCtx.resume();
-          var now = audioCtx.currentTime;
-          var osc = audioCtx.createOscillator();
-          var gain = audioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-
-          if (type === 'shoot') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(880, now);
-            osc.frequency.exponentialRampToValueAtTime(220, now + 0.08);
-            gain.gain.setValueAtTime(0.08, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.12);
-          } else if (type === 'pop') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(600, now);
-            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
-            osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
-            gain.gain.setValueAtTime(0.12, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-            osc.start(now);
-            osc.stop(now + 0.2);
-          } else if (type === 'reload') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(300, now);
-            osc.frequency.linearRampToValueAtTime(500, now + 0.1);
-            gain.gain.setValueAtTime(0.06, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-            osc.start(now);
-            osc.stop(now + 0.16);
-          } else if (type === 'empty') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(150, now);
-            gain.gain.setValueAtTime(0.05, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-            osc.start(now);
-            osc.stop(now + 0.07);
-          } else if (type === 'escape') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
-            gain.gain.setValueAtTime(0.06, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-            osc.start(now);
-            osc.stop(now + 0.5);
-          } else if (type === 'win') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(523, now);
-            osc.frequency.setValueAtTime(659, now + 0.15);
-            osc.frequency.setValueAtTime(784, now + 0.3);
-            osc.frequency.setValueAtTime(1047, now + 0.45);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-            osc.start(now);
-            osc.stop(now + 0.75);
-          }
-        } catch (e) {
-          // audio failure is non-fatal
+    } else {
+      best = Infinity;
+      for (var j = 0; j < 9; j++) {
+        if (!b[j]) {
+          b[j] = "X";
+          var s2 = minimax(b, "O", depth + 1);
+          b[j] = null;
+          if (s2 < best) best = s2;
         }
       }
+    }
+    return best;
+  }
 
-      // ============================================================
-      // SCENE CREATION
-      // ============================================================
-      function createScene() {
-        scene = new BABYLON.Scene(engine);
-        scene.clearColor = new BABYLON.Color4(0.35, 0.55, 0.85, 1.0);
-        scene.ambientColor = new BABYLON.Color3(0.4, 0.4, 0.5);
-
-        // Camera — fixed at origin, slight look-around
-        camera = new BABYLON.UniversalCamera('camera', new BABYLON.Vector3(0, 1.6, 0), scene);
-        camera.setTarget(new BABYLON.Vector3(0, 1.6, -10));
-        camera.fov = 1.1;
-        camera.minZ = 0.1;
-        camera.maxZ = 300;
-
-        // Lights
-        var hemi = new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0, 1, 0), scene);
-        hemi.intensity = 0.75;
-        hemi.diffuse = new BABYLON.Color3(1, 0.98, 0.9);
-        hemi.groundColor = new BABYLON.Color3(0.25, 0.3, 0.2);
-
-        var dir = new BABYLON.DirectionalLight('dir', new BABYLON.Vector3(-0.3, -1, 0.4), scene);
-        dir.intensity = 0.6;
-        dir.diffuse = new BABYLON.Color3(1, 0.95, 0.85);
-
-        // Skybox — inverted box with emissive gradient
-        skybox = BABYLON.MeshBuilder.CreateBox('skybox', { size: 400 }, scene);
-        var skyMat = new BABYLON.StandardMaterial('skyMat', scene);
-        skyMat.backFaceCulling = false;
-        skyMat.disableLighting = true;
-        skyMat.emissiveColor = new BABYLON.Color3(0.45, 0.65, 0.95);
-        skyMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
-        skyMat.specularColor = new BABYLON.Color3(0, 0, 0);
-        skybox.material = skyMat;
-        skybox.infiniteDistance = true;
-
-        // Ground
-        ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 200, height: 200 }, scene);
-        var groundMat = new BABYLON.StandardMaterial('groundMat', scene);
-        groundMat.diffuseColor = new BABYLON.Color3(0.18, 0.32, 0.14);
-        groundMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-        ground.material = groundMat;
-        ground.position.y = -2;
-
-        // Launcher (fairground booth prop)
-        createLauncher();
-
-        // Crosshair mesh (small sphere at camera center, parented)
-        crosshairMesh = BABYLON.MeshBuilder.CreateSphere('crosshairMesh', { diameter: 0.04 }, scene);
-        var chMat = new BABYLON.StandardMaterial('chMat', scene);
-        chMat.emissiveColor = new BABYLON.Color3(1, 0.2, 0.2);
-        chMat.disableLighting = true;
-        crosshairMesh.material = chMat;
-        crosshairMesh.parent = camera;
-        crosshairMesh.position = new BABYLON.Vector3(0, 0, 2);
-
-        // Input
-        setupInput();
-
-        // Render loop
-        scene.onBeforeRenderObservable.add(function() {
-          var dt = engine.getDeltaTime() / 1000;
-          if (dt > 0.1) dt = 0.1; // clamp
-          update(dt);
-        });
-
-        return scene;
-      }
-
-      function createLauncher() {
-        launcherGroup = new BABYLON.TransformNode('launcherGroup', scene);
-
-        // Base box
-        var base = BABYLON.MeshBuilder.CreateBox('launcherBase', { width: 1.2, height: 0.6, depth: 0.8 }, scene);
-        base.parent = launcherGroup;
-        base.position = new BABYLON.Vector3(0, -1.5, -3);
-        var baseMat = new BABYLON.StandardMaterial('baseMat', scene);
-        baseMat.diffuseColor = new BABYLON.Color3(0.45, 0.25, 0.15);
-        base.material = baseMat;
-
-        // Barrel cylinder
-        var barrel = BABYLON.MeshBuilder.CreateCylinder('launcherBarrel', { height: 1.4, diameter: 0.35 }, scene);
-        barrel.parent = launcherGroup;
-        barrel.position = new BABYLON.Vector3(0, -0.7, -3);
-        barrel.rotation.x = Math.PI / 2;
-        var barrelMat = new BABYLON.StandardMaterial('barrelMat', scene);
-        barrelMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.35);
-        barrelMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-        barrel.material = barrelMat;
-
-        // Two side posts
-        for (var i = -1; i <= 1; i += 2) {
-          var post = BABYLON.MeshBuilder.CreateCylinder('post' + i, { height: 1.8, diameter: 0.15 }, scene);
-          post.parent = launcherGroup;
-          post.position = new BABYLON.Vector3(i * 0.8, -1.0, -3);
-          var postMat = new BABYLON.StandardMaterial('postMat' + i, scene);
-          postMat.diffuseColor = new BABYLON.Color3(0.5, 0.3, 0.2);
-          post.material = postMat;
+  function bestAIMove(b) {
+    var bestScore = -Infinity;
+    var choices = [];
+    for (var i = 0; i < 9; i++) {
+      if (!b[i]) {
+        b[i] = "O";
+        var s = minimax(b, "X", 0);
+        b[i] = null;
+        if (s > bestScore) {
+          bestScore = s;
+          choices = [i];
+        } else if (s === bestScore) {
+          choices.push(i);
         }
       }
+    }
+    if (choices.length === 0) return -1;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
 
-      // ============================================================
-      // BALLOON CREATION
-      // ============================================================
-      var balloonColors = [
-        new BABYLON.Color3(0.95, 0.2, 0.2),
-        new BABYLON.Color3(0.2, 0.5, 0.95),
-        new BABYLON.Color3(0.95, 0.85, 0.2),
-        new BABYLON.Color3(0.3, 0.85, 0.3),
-        new BABYLON.Color3(0.85, 0.3, 0.85),
-        new BABYLON.Color3(0.95, 0.55, 0.15),
-        new BABYLON.Color3(0.2, 0.85, 0.85),
-        new BABYLON.Color3(0.95, 0.4, 0.6)
-      ];
+  // ---------------------------------------------------------------------------
+  // Win line visual
+  // ---------------------------------------------------------------------------
+  var winLineMesh = null;
+  function showWinLine(line) {
+    clearWinLine();
+    if (!line || line.length < 3) return;
+    var a = cellCenter(line[0]);
+    var c = cellCenter(line[2]);
+    var mid = a.add(c).scale(0.5);
+    var dir = c.subtract(a);
+    var len = dir.length() + CELL * 0.55;
+    var angle = Math.atan2(dir.z, dir.x);
 
-      function spawnBalloon() {
-        var isSmall = Math.random() < SMALL_BALLOON_CHANCE;
-        var scale = isSmall ? 0.55 : 1.0;
-        var diameter = 1.0 * scale;
+    winLineMesh = BABYLON.MeshBuilder.CreateBox("winLine", {
+      width: len, height: 0.1, depth: 0.16
+    }, scene);
+    winLineMesh.material = matWin;
+    winLineMesh.position.set(mid.x, BOARD_Y + 0.28, mid.z);
+    winLineMesh.rotation.y = -angle;
+    winLineMesh.parent = boardRoot;
 
-        var balloon = BABYLON.MeshBuilder.CreateSphere('balloon', {
-          diameter: diameter,
-          segments: 12
-        }, scene);
-
-        // Teardrop shape: scale Y
-        balloon.scaling.y = 1.25;
-
-        var color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
-        var mat = new BABYLON.StandardMaterial('balloonMat', scene);
-        mat.diffuseColor = color;
-        mat.specularColor = new BABYLON.Color3(0.6, 0.6, 0.6);
-        mat.specularPower = 64;
-        mat.emissiveColor = color.scale(0.15);
-        balloon.material = mat;
-
-        // String
-        var string = BABYLON.MeshBuilder.CreateCylinder('string', {
-          height: 0.8 * scale,
-          diameter: 0.02
-        }, scene);
-        string.parent = balloon;
-        string.position.y = -0.75 * scale;
-        var stringMat = new BABYLON.StandardMaterial('stringMat', scene);
-        stringMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
-        stringMat.emissiveColor = new BABYLON.Color3(0.3, 0.3, 0.3);
-        string.material = stringMat;
-
-        // Spawn position
-        var x = (Math.random() - 0.5) * 2 * SPAWN_X_RANGE;
-        var z = SPAWN_Z_MIN + Math.random() * (SPAWN_Z_MAX - SPAWN_Z_MIN);
-        balloon.position = new BABYLON.Vector3(x, SPAWN_Y, z);
-
-        // Velocity: fly upward and away (negative Z)
-        var speed = BALLOON_BASE_SPEED + game.wave * BALLOON_SPEED_PER_WAVE;
-        if (isSmall) speed *= 1.6;
-        var vel = new BABYLON.Vector3(
-          (Math.random() - 0.5) * 0.8,
-          speed,
-          -speed * 0.6 - Math.random() * 0.5
-        );
-
-        var balloonData = {
-          mesh: balloon,
-          string: string,
-          velocity: vel,
-          isSmall: isSmall,
-          swayPhase: Math.random() * Math.PI * 2,
-          swayAmp: 0.3 + Math.random() * 0.4,
-          alive: true,
-          baseX: x
-        };
-
-        balloons.push(balloonData);
-        game.balloonsAlive++;
-        game.balloonsSpawned++;
+    var t = 0;
+    var obs = scene.onBeforeRenderObservable.add(function () {
+      if (!winLineMesh || winLineMesh.isDisposed()) {
+        scene.onBeforeRenderObservable.remove(obs);
+        return;
       }
+      t += engine.getDeltaTime() / 1000;
+      var pulse = 0.85 + 0.15 * Math.sin(t * 9);
+      winLineMesh.scaling.y = pulse;
+      winLineMesh.scaling.z = pulse;
+    });
+  }
 
-      // ============================================================
-      // PARTICLE BURST
-      // ============================================================
-      function createPopBurst(position, color) {
-        try {
-          var ps = new BABYLON.ParticleSystem('pop', 40, scene);
-          ps.emitter = position.clone();
-          ps.minSize = 0.08;
-          ps.maxSize = 0.22;
-          ps.minLifeTime = 0.2;
-          ps.maxLifeTime = 0.5;
-          ps.emitRate = 200;
-          ps.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
-          ps.gravity = new BABYLON.Vector3(0, -6, 0);
-          ps.direction1 = new BABYLON.Vector3(-3, 3, -3);
-          ps.direction2 = new BABYLON.Vector3(3, 6, 3);
-          ps.minEmitPower = 2;
-          ps.maxEmitPower = 6;
-          ps.color1 = new BABYLON.Color4(color.r, color.g, color.b, 1);
-          ps.color2 = new BABYLON.Color4(1, 1, 1, 1);
-          ps.colorDead = new BABYLON.Color4(color.r, color.g, color.b, 0);
-          ps.updateSpeed = 0.02;
-          ps.manualEmitCount = 40;
-          ps.disposeOnStop = true;
-          ps.start();
-          particleSystems.push(ps);
-          setTimeout(function() {
-            try { ps.stop(); } catch (e) {}
-            var idx = particleSystems.indexOf(ps);
-            if (idx >= 0) particleSystems.splice(idx, 1);
-          }, 600);
-        } catch (e) {
-          // particles are cosmetic
-        }
+  function clearWinLine() {
+    if (winLineMesh) {
+      try { winLineMesh.dispose(); } catch (e) {}
+      winLineMesh = null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Game state
+  // ---------------------------------------------------------------------------
+  var STATE = {
+    MENU: "MENU",
+    PLAYING: "PLAYING",
+    ROUND_END: "ROUND_END",
+    MATCH_OVER: "MATCH_OVER"
+  };
+
+  var state = STATE.MENU;
+  var humanTurn = true;
+  var aiThinking = false;
+  var roundLocked = false;
+  var scores = { wins: 0, losses: 0, draws: 0 };
+  var WIN_TARGET = 5;
+  var aiTimer = null;
+  var roundEndTimer = null;
+
+  // DOM refs
+  var scoreEl = document.getElementById("score");
+  var turnEl = document.getElementById("turn");
+  var modalWrap = document.getElementById("modalWrap");
+  var modalEl = document.getElementById("modal");
+
+  function updateScoreHUD() {
+    if (!scoreEl) return;
+    scoreEl.innerHTML =
+      '<span class="you">You ' + scores.wins + '</span> &nbsp;—&nbsp; ' +
+      '<span class="ai">AI ' + scores.losses + '</span> &nbsp;—&nbsp; ' +
+      '<span class="draw">Draws ' + scores.draws + '</span>';
+  }
+
+  function setTurnHUD(text, cls) {
+    if (!turnEl) return;
+    turnEl.textContent = text || "";
+    turnEl.className = cls || "";
+  }
+
+  function showModal(html) {
+    if (!modalWrap || !modalEl) return;
+    modalEl.innerHTML = html;
+    modalWrap.classList.add("show");
+    bindModalButtons();
+  }
+
+  function hideModal() {
+    if (!modalWrap) return;
+    modalWrap.classList.remove("show");
+  }
+
+  function bindModalButtons() {
+    if (!modalEl) return;
+    var b = modalEl.querySelector("[data-action]");
+    if (b) {
+      b.addEventListener("click", function () {
+        var act = b.getAttribute("data-action");
+        if (act === "start") startMatch();
+        else if (act === "next") nextRound();
+        else if (act === "menu") toMenu();
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Board helpers
+  // ---------------------------------------------------------------------------
+  function clearBoard() {
+    clearWinLine();
+    for (var i = 0; i < 9; i++) {
+      if (marks[i]) {
+        try { marks[i].dispose(false, true); } catch (e) {}
+        marks[i] = null;
       }
+      board[i] = null;
+    }
+  }
 
-      // ============================================================
-      // INPUT
-      // ============================================================
-      function setupInput() {
-        // Pointer move for aiming
-        canvas.addEventListener('mousemove', function(e) {
-          if (game.state !== STATE.PLAYING) return;
-          var rect = canvas.getBoundingClientRect();
-          var nx = (e.clientX - rect.left) / rect.width;  // 0..1
-          var ny = (e.clientY - rect.top) / rect.height;   // 0..1
-          targetYaw = (nx - 0.5) * 2 * MAX_YAW;
-          targetPitch = -(ny - 0.5) * 2 * MAX_PITCH_UP;
-          if (targetPitch < -MAX_PITCH_DOWN) targetPitch = -MAX_PITCH_DOWN;
-        });
+  function placeMark(i, player, animate) {
+    if (i < 0 || i > 8) return;
+    if (board[i]) return;
+    board[i] = player;
+    var pos = cellCenter(i);
+    var node = (player === "X") ? createX(pos) : createO(pos);
+    marks[i] = node;
+    if (animate !== false) animateScaleIn(node);
+    else if (node) node.scaling.set(1, 1, 1);
 
-        // Touch support
-        canvas.addEventListener('touchmove', function(e) {
-          if (game.state !== STATE.PLAYING) return;
-          if (e.touches.length > 0) {
-            var rect = canvas.getBoundingClientRect();
-            var nx = (e.touches[0].clientX - rect.left) / rect.width;
-            var ny = (e.touches[0].clientY - rect.top) / rect.height;
-            targetYaw = (nx - 0.5) * 2 * MAX_YAW;
-            targetPitch = -(ny - 0.5) * 2 * MAX_PITCH_UP;
-            if (targetPitch < -MAX_PITCH_DOWN) targetPitch = -MAX_PITCH_DOWN;
-          }
-          e.preventDefault();
-        }, { passive: false });
+    var col = (player === "X") ? new BABYLON.Color3(0.13, 0.9, 1.0) : new BABYLON.Color3(1.0, 0.24, 0.94);
+    burst(pos.add(new BABYLON.Vector3(0, 0.2, 0)), col);
+  }
 
-        canvas.addEventListener('touchstart', function(e) {
-          if (game.state === STATE.PLAYING) {
-            fire();
-          }
-          e.preventDefault();
-        }, { passive: false });
+  // ---------------------------------------------------------------------------
+  // Flow
+  // ---------------------------------------------------------------------------
+  function toMenu() {
+    state = STATE.MENU;
+    clearTimers();
+    clearBoard();
+    humanTurn = true;
+    aiThinking = false;
+    roundLocked = false;
+    setTurnHUD("");
+    updateScoreHUD();
+    showModal(
+      '<h1>NEON TIC-TAC-TOE</h1>' +
+      '<p>You are <b style="color:#22e6ff">X</b> &nbsp;•&nbsp; AI is <b style="color:#ff3df0">O</b></p>' +
+      '<p class="sub">First to ' + WIN_TARGET + ' wins takes the match.</p>' +
+      '<button class="btn" data-action="start">Start Match</button>'
+    );
+  }
 
-        // Click to fire
-        canvas.addEventListener('mousedown', function(e) {
-          if (e.button === 0 && game.state === STATE.PLAYING) {
-            fire();
-          }
-        });
+  function startMatch() {
+    scores = { wins: 0, losses: 0, draws: 0 };
+    updateScoreHUD();
+    hideModal();
+    startRound(true);
+  }
 
-        // Keyboard
-        window.addEventListener('keydown', function(e) {
-          if (e.key === ' ' || e.code === 'Space') {
-            e.preventDefault();
-            if (game.state === STATE.PLAYING) fire();
-            else if (game.state === STATE.MENU) startGame();
-            else if (game.state === STATE.GAME_OVER || game.state === STATE.VICTORY) startGame();
-          } else if (e.key === 'r' || e.key === 'R') {
-            if (game.state === STATE.PLAYING) reload();
-          } else if (e.key === 'Escape') {
-            if (game.state === STATE.PLAYING) pauseGame();
-            else if (game.state === STATE.PAUSED) resumeGame();
-          } else if (e.key === 'Enter') {
-            if (game.state === STATE.MENU) startGame();
-            else if (game.state === STATE.GAME_OVER || game.state === STATE.VICTORY) startGame();
-          }
-        });
+  function startRound(humanFirst) {
+    clearTimers();
+    clearBoard();
+    state = STATE.PLAYING;
+    roundLocked = false;
+    aiThinking = false;
+    humanTurn = !!humanFirst;
+    hideModal();
+    updateScoreHUD();
 
-        // Buttons
-        document.getElementById('startBtn').addEventListener('click', startGame);
-        document.getElementById('resumeBtn').addEventListener('click', resumeGame);
-        document.getElementById('retryBtn').addEventListener('click', startGame);
-        document.getElementById('playAgainBtn').addEventListener('click', startGame);
+    if (humanTurn) {
+      setTurnHUD("Your turn (X)", "you");
+    } else {
+      setTurnHUD("AI thinking…", "ai");
+      scheduleAI();
+    }
+  }
+
+  function nextRound() {
+    // Alternate who starts each round for fairness
+    var humanFirst = (scores.wins + scores.losses + scores.draws) % 2 === 0;
+    startRound(humanFirst);
+  }
+
+  function clearTimers() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    if (roundEndTimer) { clearTimeout(roundEndTimer); roundEndTimer = null; }
+  }
+
+  function scheduleAI() {
+    if (aiTimer) clearTimeout(aiTimer);
+    aiThinking = true;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (state !== STATE.PLAYING) return;
+      if (humanTurn) return;
+      var mv = bestAIMove(board);
+      if (mv >= 0) {
+        placeMark(mv, "O", true);
       }
+      aiThinking = false;
+      if (state !== STATE.PLAYING) return;
+      humanTurn = true;
+      setTurnHUD("Your turn (X)", "you");
+      checkRoundEnd();
+    }, 420);
+  }
 
-      // ============================================================
-      // FIRING
-      // ============================================================
-      function fire() {
-        if (game.state !== STATE.PLAYING) return;
-        if (game.reloading) return;
-
-        if (game.ammo <= 0) {
-          playSound('empty');
-          return;
-        }
-
-        game.ammo--;
-        updateHUD();
-        playSound('shoot');
-
-        // Ray from camera through crosshair
-        var ray = scene.createPickingRay(
-          engine.getRenderWidth() / 2,
-          engine.getRenderHeight() / 2,
-          BABYLON.Matrix.Identity(),
-          camera
-        );
-
-        // Check each balloon with sphere intersection
-        var hit = null;
-        var hitDist = Infinity;
-
-        for (var i = 0; i < balloons.length; i++) {
-          var b = balloons[i];
-          if (!b.alive || !b.mesh) continue;
-
-          var center = b.mesh.position;
-          var radius = (b.mesh.scaling.y * 0.5) + 0.15; // generous hit radius
-
-          var toCenter = center.subtract(ray.origin);
-          var t = BABYLON.Vector3.Dot(toCenter, ray.direction);
-          if (t < 0) continue;
-
-          var closest = ray.origin.add(ray.direction.scale(t));
-          var dist = BABYLON.Vector3.Distance(closest, center);
-
-          if (dist < radius && t < hitDist) {
-            hit = b;
-            hitDist = t;
-          }
-        }
-
-        if (hit) {
-          popBalloon(hit);
-        } else {
-          // Miss — reset combo
-          game.combo = 0;
-          game.comboTimer = 0;
-          updateHUD();
-        }
-
-        // Auto-reload when empty
-        if (game.ammo <= 0 && !game.reloading) {
-          reload();
-        }
+  function checkRoundEnd() {
+    var w = winnerOf(board);
+    if (w) {
+      roundLocked = true;
+      showWinLine(w.line);
+      if (w.player === "X") {
+        scores.wins++;
+        setTurnHUD("You win the round!", "you");
+      } else {
+        scores.losses++;
+        setTurnHUD("AI wins the round.", "ai");
       }
+      updateScoreHUD();
+      endRound(w.player);
+      return true;
+    }
+    if (isFull(board)) {
+      roundLocked = true;
+      scores.draws++;
+      updateScoreHUD();
+      setTurnHUD("Draw.", "");
+      endRound(null);
+      return true;
+    }
+    return false;
+  }
 
-      function popBalloon(b) {
-        if (!b || !b.alive) return;
-        b.alive = false;
-        game.balloonsPopped++;
-        game.balloonsAlive--;
-
-        // Combo
-        game.combo++;
-        game.comboTimer = COMBO_TIMEOUT;
-
-        var points = b.isSmall ? 25 : 10;
-        var multiplier = Math.max(1, game.combo);
-        game.score += points * multiplier;
-
-        // Particle burst
-        var color = new BABYLON.Color3(1, 0.5, 0.2);
-        if (b.mesh && b.mesh.material && b.mesh.material.diffuseColor) {
-          color = b.mesh.material.diffuseColor;
-        }
-        createPopBurst(b.mesh.position.clone(), color);
-
-        // Remove mesh
-        if (b.mesh) {
-          if (b.string) {
-            try { b.string.dispose(); } catch (e) {}
-          }
-          try { b.mesh.dispose(); } catch (e) {}
-        }
-
-        playSound('pop');
-        updateHUD();
-
-        // Check wave clear
-        checkWaveClear();
+  function endRound(winner) {
+    state = STATE.ROUND_END;
+    clearTimers();
+    roundEndTimer = setTimeout(function () {
+      roundEndTimer = null;
+      if (scores.wins >= WIN_TARGET) {
+        matchOver(true);
+      } else if (scores.losses >= WIN_TARGET) {
+        matchOver(false);
+      } else {
+        nextRound();
       }
+    }, 1200);
+  }
 
-      function reload() {
-        if (game.reloading) return;
-        if (game.ammo >= MAX_AMMO) return;
-        game.reloading = true;
+  function matchOver(humanWon) {
+    state = STATE.MATCH_OVER;
+    clearTimers();
+    setTurnHUD(humanWon ? "Match won!" : "Match lost.", humanWon ? "you" : "ai");
+    var title = humanWon ? "YOU WIN THE MATCH" : "AI WINS THE MATCH";
+    var color = humanWon ? "#22e6ff" : "#ff3df0";
+    showModal(
+      '<h2 style="color:' + color + '">' + title + '</h2>' +
+      '<p>Final score</p>' +
+      '<p><b style="color:#22e6ff">You ' + scores.wins + '</b> &nbsp;—&nbsp; ' +
+      '<b style="color:#ff3df0">AI ' + scores.losses + '</b> &nbsp;—&nbsp; ' +
+      '<b style="color:#c9d6e6">Draws ' + scores.draws + '</b></p>' +
+      '<button class="btn" data-action="start">Play Again</button>' +
+      '<div style="margin-top:10px"><button class="btn magenta" data-action="menu">Menu</button></div>'
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Human move
+  // ---------------------------------------------------------------------------
+  function tryHumanMove(i) {
+    if (state !== STATE.PLAYING) return;
+    if (!humanTurn) return;
+    if (roundLocked) return;
+    if (i < 0 || i > 8) return;
+    if (board[i]) return;
+
+    placeMark(i, "X", true);
+    humanTurn = false;
+    if (checkRoundEnd()) return;
+    setTurnHUD("AI thinking…", "ai");
+    scheduleAI();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Input: pointer
+  // ---------------------------------------------------------------------------
+  scene.onPointerDown = function (evt, pickInfo) {
+    if (state === STATE.MENU || state === STATE.MATCH_OVER) {
+      // Clicking anywhere on the board area while modal is up does nothing;
+      // modal buttons handle start. But allow quick start on canvas click.
+      return;
+    }
+    if (state !== STATE.PLAYING) return;
+    if (!pickInfo) return;
+    var picked = pickInfo.pickedMesh;
+    if (!picked) return;
+    if (picked.metadata && typeof picked.metadata.cell === "number") {
+      tryHumanMove(picked.metadata.cell);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Input: keyboard
+  // ---------------------------------------------------------------------------
+  window.addEventListener("keydown", function (e) {
+    var k = e.key;
+
+    if (k === "Enter") {
+      if (state === STATE.MENU) { startMatch(); e.preventDefault(); return; }
